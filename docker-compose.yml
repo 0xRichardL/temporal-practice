@@ -67,25 +67,25 @@ services:
     ports:
       - 8002:8080
     build:
-      context: ./account
+      context: ./fraud-check
       dockerfile: ../Dockerfile
   notification:
     ports:
       - 8003:8080
     build:
-      context: ./account
+      context: ./notification
       dockerfile: ../Dockerfile
   payment:
     ports:
       - 8004:8080
     build:
-      context: ./account
+      context: ./payment
       dockerfile: ../Dockerfile
   reporting:
     ports:
       - 8005:8080
     build:
-      context: ./account
+      context: ./reporting
       dockerfile: ../Dockerfile
 networks:
   internal:

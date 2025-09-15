@@ -18,12 +18,12 @@ func NewAccountService(db *gorm.DB) *AccountService {
 	}
 }
 
-func (s *AccountService) ValidateAccount(ctx context.Context, dto dtos.ValidateAccountRequest) (bool, error) {
+func (s *AccountService) ValidateAccount(ctx context.Context, dto dtos.ValidateAccountRequest) (*dtos.ValidateAccountResponse, error) {
 	bln, err := gorm.G[models.Account](s.db).Where("account_id = ?", dto.AccountID).First(ctx)
 	if err != nil {
-		return false, err
+		return nil, err
 	}
-	return bln.Balance >= dto.Amount, nil
+	return &dtos.ValidateAccountResponse{Valid: bln.Balance >= dto.Amount}, nil
 }
 
 func (s *AccountService) Debit(ctx context.Context, dto dtos.DebitRequest) (*dtos.DebitResponse, error) {

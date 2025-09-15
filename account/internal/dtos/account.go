@@ -5,6 +5,10 @@ type ValidateAccountRequest struct {
 	Amount    int64  `json:"amount" binding:"required,gt=0"`
 }
 
+type ValidateAccountResponse struct {
+	Valid bool `json:"valid"`
+}
+
 type DebitRequest struct {
 	AccountID string `json:"account_id" binding:"required"`
 	Amount    int64  `json:"amount" binding:"required,gt=0"`
