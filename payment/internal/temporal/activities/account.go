@@ -19,6 +19,16 @@ type DebitActivityParam struct {
 }
 
 type DebitActivityResultObject struct {
+	Balance int64
+}
+
+var CreditActivityName = "account::credit"
+
+type CreditActivityParam struct {
 	AccountID string
-	Balance   int64
+	Amount    int64
+}
+
+type CreditActivityResultObject struct {
+	Balance int64
 }

@@ -1,8 +1,9 @@
 package main
 
 import (
+	"log"
+
 	"github.com/0xRichardL/temporal-practice/account/internal/models"
-	"github.com/0xRichardL/temporal-practice/account/internal/rest"
 	"github.com/0xRichardL/temporal-practice/account/internal/services"
 	"github.com/gin-gonic/gin"
 	"gorm.io/driver/postgres"
@@ -10,17 +11,20 @@ import (
 )
 
 func main() {
-	// DBs
+	/* DBs: */
 	db, err := gorm.Open(postgres.Open(""), &gorm.Config{})
 	if err != nil {
 		panic("failed to connect database")
 	}
 	db.AutoMigrate(&models.Account{})
-	// Services
-	accountService := services.NewAccountService(db)
-	// REST
-	accountControler := rest.NewAccountController(accountService)
-	accountControler.RegisterRoutes()
+	/* Temporal */
+	/* Services */
+	services.NewAccountService(db)
+
 	r := gin.Default()
-	r.Run()
+
+	log.Println("Starting server on port 8080")
+	if err := r.Run(":8080"); err != nil {
+		log.Fatalln("Unable to start server", err)
+	}
 }

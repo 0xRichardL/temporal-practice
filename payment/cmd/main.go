@@ -3,13 +3,17 @@ package main
 import (
 	"log"
 
-	"github.com/0xRichardL/temporal-practice/payment/internal/workflows"
+	"github.com/gin-gonic/gin"
 	"go.temporal.io/sdk/client"
-	"go.temporal.io/sdk/worker"
+
+	"github.com/0xRichardL/temporal-practice/payment/internal/rest"
+	"github.com/0xRichardL/temporal-practice/payment/internal/services"
+	"github.com/0xRichardL/temporal-practice/payment/internal/temporal/workflows"
 )
 
 func main() {
-	// The client and worker are heavyweight objects that should be created once per process.
+	/* Temporal: */
+	// Connect to Temporal server
 	c, err := client.Dial(client.Options{
 		HostPort: client.DefaultHostPort,
 	})
@@ -17,13 +21,19 @@ func main() {
 		log.Fatalln("Unable to create client", err)
 	}
 	defer c.Close()
+	// Register workflows
+	workflows.RegisterPaymentWorkFlow(c)
 
-	w := worker.New(c, "payment", worker.Options{})
+	/* Services: */
+	paymentService := services.NewPaymentService(c)
 
-	w.RegisterWorkflow(workflows.PaymentWorkFlowDefinition)
+	/* REST server: */
+	r := gin.Default()
+	paymentController := rest.NewPaymentController(paymentService)
+	paymentController.RegisterRoutes(r)
 
-	err = w.Run(worker.InterruptCh())
-	if err != nil {
-		log.Fatalln("Unable to start worker", err)
+	log.Println("Starting server on port 8080")
+	if err := r.Run(":8080"); err != nil {
+		log.Fatalln("Unable to start server", err)
 	}
 }
