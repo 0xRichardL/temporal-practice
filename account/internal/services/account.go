@@ -3,9 +3,10 @@ package services
 import (
 	"context"
 
+	"gorm.io/gorm"
+
 	"github.com/0xRichardL/temporal-practice/account/internal/dtos"
 	"github.com/0xRichardL/temporal-practice/account/internal/models"
-	"gorm.io/gorm"
 )
 
 type AccountService struct {

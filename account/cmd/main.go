@@ -3,11 +3,14 @@ package main
 import (
 	"log"
 
-	"github.com/0xRichardL/temporal-practice/account/internal/models"
-	"github.com/0xRichardL/temporal-practice/account/internal/services"
-	"github.com/gin-gonic/gin"
+	"go.temporal.io/sdk/client"
+	"go.temporal.io/sdk/worker"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+
+	"github.com/0xRichardL/temporal-practice/account/internal/models"
+	"github.com/0xRichardL/temporal-practice/account/internal/services"
+	"github.com/0xRichardL/temporal-practice/account/internal/temporal"
 )
 
 func main() {
@@ -17,14 +20,22 @@ func main() {
 		panic("failed to connect database")
 	}
 	db.AutoMigrate(&models.Account{})
-	/* Temporal */
 	/* Services */
-	services.NewAccountService(db)
-
-	r := gin.Default()
-
-	log.Println("Starting server on port 8080")
-	if err := r.Run(":8080"); err != nil {
-		log.Fatalln("Unable to start server", err)
+	accountService := services.NewAccountService(db)
+	/* Temporal: */
+	// Connect to Temporal server
+	c, err := client.Dial(client.Options{
+		HostPort: client.DefaultHostPort,
+	})
+	if err != nil {
+		log.Fatalln("Unable to create client", err)
+	}
+	defer c.Close()
+	w := worker.New(c, "account-tasks", worker.Options{})
+	AccountActivities := temporal.NewAccountActivities(accountService)
+	AccountActivities.Register(w)
+	err = w.Run(worker.InterruptCh())
+	if err != nil {
+		log.Fatalln("Unable to start Worker", err)
 	}
 }

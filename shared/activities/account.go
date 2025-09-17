@@ -1,5 +1,11 @@
 package activities
 
+import (
+	"context"
+
+	"go.temporal.io/sdk/worker"
+)
+
 var ValidateAccountActivityName = "account::validate"
 
 type ValidateAccountActivityParam struct {
@@ -31,4 +37,11 @@ type CreditActivityParam struct {
 
 type CreditActivityResult struct {
 	Balance int64
+}
+
+type AccountActivities interface {
+	Register(w worker.Worker)
+	ValidateAccount(ctx context.Context, param ValidateAccountActivityParam) (*ValidateAccountActivityResult, error)
+	Debit(ctx context.Context, param DebitActivityParam) (*DebitActivityResult, error)
+	Credit(ctx context.Context, param CreditActivityParam) (*CreditActivityResult, error)
 }

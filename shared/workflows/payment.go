@@ -95,7 +95,7 @@ func PaymentWorkFlowDefinition(ctx workflow.Context, param PaymentWorkFlowParam)
 	}
 
 	// Step 4: Send user a notification of the payment.
-	err = workflow.ExecuteActivity(ctx, activities.NotificationPaymentActivityName, activities.NotificationPaymentActivityParam{
+	err = workflow.ExecuteActivity(ctx, activities.NotifyPaymentActivityName, activities.NotifyPaymentActivityParam{
 		AccountID: param.AccountID,
 		Amount:    param.Amount,
 	}).Get(ctx, nil)
