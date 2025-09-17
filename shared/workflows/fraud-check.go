@@ -1,6 +1,8 @@
 package workflows
 
-import "go.temporal.io/sdk/workflow"
+import (
+	"go.temporal.io/sdk/workflow"
+)
 
 var (
 	FraudCheckTaskQueue  = "fraud-check-tasks"

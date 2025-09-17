@@ -8,7 +8,7 @@ import (
 
 	"github.com/0xRichardL/temporal-practice/payment/internal/rest"
 	"github.com/0xRichardL/temporal-practice/payment/internal/services"
-	"github.com/0xRichardL/temporal-practice/payment/internal/temporal/workflows"
+	"github.com/0xRichardL/temporal-practice/shared/workflows"
 )
 
 func main() {

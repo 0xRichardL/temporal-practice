@@ -4,10 +4,11 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/0xRichardL/temporal-practice/payment/internal/dtos"
-	"github.com/0xRichardL/temporal-practice/payment/internal/temporal/workflows"
 	"github.com/google/uuid"
 	"go.temporal.io/sdk/client"
+
+	"github.com/0xRichardL/temporal-practice/payment/internal/dtos"
+	"github.com/0xRichardL/temporal-practice/shared/workflows"
 )
 
 type PaymentService struct {

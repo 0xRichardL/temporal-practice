@@ -7,7 +7,7 @@ type ValidateAccountActivityParam struct {
 	Amount    int64
 }
 
-type ValidateAccountActivityResultObject struct {
+type ValidateAccountActivityResult struct {
 	Valid bool
 }
 
@@ -18,7 +18,7 @@ type DebitActivityParam struct {
 	Amount    int64
 }
 
-type DebitActivityResultObject struct {
+type DebitActivityResult struct {
 	Balance int64
 }
 
@@ -29,6 +29,6 @@ type CreditActivityParam struct {
 	Amount    int64
 }
 
-type CreditActivityResultObject struct {
+type CreditActivityResult struct {
 	Balance int64
 }

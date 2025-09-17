@@ -4,13 +4,13 @@ import (
 	"errors"
 	"log"
 
-	"github.com/0xRichardL/temporal-practice/payment/internal/temporal/activities"
-
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/worker"
 	"go.temporal.io/sdk/workflow"
 	"go.uber.org/multierr"
+
+	"github.com/0xRichardL/temporal-practice/shared/activities"
 )
 
 var (
@@ -49,8 +49,8 @@ func PaymentWorkFlowDefinition(ctx workflow.Context, param PaymentWorkFlowParam)
 		AccountID: param.AccountID,
 		Amount:    param.Amount,
 	}
-	validateAccountActivityResultObject := activities.ValidateAccountActivityResultObject{}
-	err = workflow.ExecuteActivity(ctx, activities.ValidateAccountActivityName, validateAccountParam).Get(ctx, &validateAccountActivityResultObject)
+	validateAccountActivityResult := activities.ValidateAccountActivityResult{}
+	err = workflow.ExecuteActivity(ctx, activities.ValidateAccountActivityName, validateAccountParam).Get(ctx, &validateAccountActivityResult)
 	if err != nil {
 		return nil, err
 	}
@@ -59,8 +59,8 @@ func PaymentWorkFlowDefinition(ctx workflow.Context, param PaymentWorkFlowParam)
 		AccountID: param.AccountID,
 		Amount:    param.Amount,
 	}
-	debitActivityResultObject := activities.DebitActivityResultObject{}
-	err = workflow.ExecuteActivity(ctx, activities.DebitActivityName, debitParam).Get(ctx, &debitActivityResultObject)
+	debitActivityResult := activities.DebitActivityResult{}
+	err = workflow.ExecuteActivity(ctx, activities.DebitActivityName, debitParam).Get(ctx, &debitActivityResult)
 	if err != nil {
 		return nil, err
 	}
