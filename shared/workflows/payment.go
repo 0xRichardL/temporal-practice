@@ -44,6 +44,7 @@ func PaymentWorkFlowDefinition(ctx workflow.Context, param PaymentWorkFlowParam)
 	}
 	ctx = workflow.WithActivityOptions(ctx, ao)
 
+	// WORKFLOW'S STEPS:
 	// Step 1: Validate account
 	validateAccountParam := activities.ValidateAccountActivityParam{
 		AccountID: param.AccountID,
@@ -83,10 +84,7 @@ func PaymentWorkFlowDefinition(ctx workflow.Context, param PaymentWorkFlowParam)
 		WorkflowID: "fraud-check-" + param.OrderID,
 		TaskQueue:  FraudCheckTaskQueue,
 	})
-	err = workflow.ExecuteChildWorkflow(fraudCheckCtx, FraudCheckWorkflowDefinition, FraudCheckWorkflowParam{
-		AccountID: param.AccountID,
-		Amount:    param.Amount,
-	}).Get(ctx, &fraudCheckResult)
+	err = workflow.ExecuteChildWorkflow(fraudCheckCtx, FraudCheckWorkflowDefinition, FraudCheckWorkflowParam{OrderID: param.OrderID}).Get(ctx, &fraudCheckResult)
 	if err != nil {
 		return nil, err
 	}

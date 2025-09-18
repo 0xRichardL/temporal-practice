@@ -2,7 +2,7 @@ go 1.25.1
 
 use (
 	./account
-	./fraud-check
+	./fraud
 	./notification
 	./payment
 	./reporting

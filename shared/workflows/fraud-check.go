@@ -10,8 +10,7 @@ var (
 )
 
 type FraudCheckWorkflowParam struct {
-	AccountID string
-	Amount    int64
+	OrderID string
 }
 
 type FraudCheckWorkflowResult struct {

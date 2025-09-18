@@ -34,6 +34,6 @@ func main() {
 
 	log.Println("Starting server on port 8080")
 	if err := r.Run(":8080"); err != nil {
-		log.Fatalln("Unable to start server", err)
+		log.Fatalln("Unable to start Payment server", err)
 	}
 }
