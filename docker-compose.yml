@@ -1,38 +1,40 @@
 version: '3.9'
 
 services:
-  postgresql:
+  temporal-postgresql:
     container_name: temporal-postgresql
     environment:
       POSTGRES_PASSWORD: temporal
       POSTGRES_USER: temporal
-    image: postgres:${POSTGRESQL_VERSION}
+    image: postgres:16
     networks:
       - internal
     ports:
       - 5432:5432
     volumes:
       - /var/lib/postgresql/data
+
   temporal:
     container_name: temporal
     depends_on:
-      - postgresql
+      - temporal-postgresql
     environment:
       - DB=postgres12
       - DB_PORT=5432
       - POSTGRES_USER=temporal
       - POSTGRES_PWD=temporal
-      - POSTGRES_SEEDS=postgresql
+      - POSTGRES_SEEDS=temporal-postgresql
       - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development-sql.yaml
       - TEMPORAL_ADDRESS=temporal:7233
       - TEMPORAL_CLI_ADDRESS=temporal:7233
-    image: temporalio/auto-setup:${TEMPORAL_VERSION}
+    image: temporalio/auto-setup:1.28.1
     networks:
       - internal
     ports:
       - 7233:7233
     volumes:
       - ./dynamicconfig:/etc/temporal/config/dynamicconfig
+
   temporal-admin-tools:
     container_name: temporal-admin-tools
     depends_on:
@@ -40,11 +42,12 @@ services:
     environment:
       - TEMPORAL_ADDRESS=temporal:7233
       - TEMPORAL_CLI_ADDRESS=temporal:7233
-    image: temporalio/admin-tools:${TEMPORAL_ADMINTOOLS_VERSION}
+    image: temporalio/admin-tools:1.28.1-tctl-1.18.4-cli-1.4.1
     networks:
       - internal
     stdin_open: true
     tty: true
+
   temporal-ui:
     container_name: temporal-ui
     depends_on:
@@ -52,41 +55,95 @@ services:
     environment:
       - TEMPORAL_ADDRESS=temporal:7233
       - TEMPORAL_CORS_ORIGINS=http://localhost:3000
-    image: temporalio/ui:${TEMPORAL_UI_VERSION}
+    image: temporalio/ui:2.34.0
     networks:
       - internal
     ports:
       - 8080:8080
+
+  postgres:
+    container_name: postgres
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_DB: postgres
+      
+    image: postgres:16
+    networks:
+      - internal
+    ports:
+      - 5434:5432
+    volumes:
+      - /var/lib/postgresql/data
+
   account:
+    environment:
+      - DB_URI=postgresql://postgres:postgres@postgres:5432/postgres?sslmode=disable
+      - TEMPORAL_HOST=temporal:7233
     ports:
       - 8001:8080
+    networks:
+      - internal
     build:
       context: ./account
       dockerfile: ../Dockerfile
-  fraud-check:
+    restart: always
+    depends_on:
+      - postgres
+      - temporal
+
+  fraud:
+    environment:
+      - TEMPORAL_HOST=temporal:7233
     ports:
       - 8002:8080
+    networks:
+      - internal
     build:
-      context: ./fraud-check
+      context: ./fraud
       dockerfile: ../Dockerfile
-  notification:
-    ports:
-      - 8003:8080
-    build:
-      context: ./notification
-      dockerfile: ../Dockerfile
+    restart: always
+    depends_on:
+      - postgres
+      - temporal
+
+  # notification:
+  #   ports:
+  #     - 8003:8080
+  #   networks:
+  #     - internal
+  #   build:
+  #     context: ./notification
+  #     dockerfile: ../Dockerfile
+  #   depends_on:
+  #     - postgres
+
   payment:
+    environment:
+      - TEMPORAL_HOST=temporal:7233
     ports:
       - 8004:8080
+    networks:
+      - internal
     build:
       context: ./payment
       dockerfile: ../Dockerfile
-  reporting:
-    ports:
-      - 8005:8080
-    build:
-      context: ./reporting
-      dockerfile: ../Dockerfile
+    restart: always
+    depends_on:
+      - postgres
+      - temporal
+
+  # reporting:
+  #   ports:
+  #     - 8005:8080
+  #   networks:
+  #     - internal
+  #   build:
+  #     context: ./reporting
+  #     dockerfile: ../Dockerfile
+  #   depends_on:
+  #     - postgres
+
 networks:
   internal:
     driver: bridge

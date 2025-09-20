@@ -1,0 +1,53 @@
+definitions:
+  dtos.PaymentRequest:
+    properties:
+      account_id:
+        type: string
+      amount:
+        type: integer
+    type: object
+  dtos.PaymentResponse:
+    properties:
+      run_id:
+        type: string
+      workflow_id:
+        type: string
+    type: object
+info:
+  contact: {}
+paths:
+  /payment:
+    post:
+      consumes:
+      - application/json
+      description: Creates a new payment and starts a Temporal workflow.
+      parameters:
+      - description: Payment request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.PaymentRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Payment created successfully
+          schema:
+            $ref: '#/definitions/dtos.PaymentResponse'
+        "400":
+          description: '{"error": "Bad request"}'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: '{"error": "Internal server error"}'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Create a new payment
+      tags:
+      - payment
+swagger: "2.0"

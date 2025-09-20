@@ -23,6 +23,17 @@ func (c *FraudController) RegisterRoutes(router *gin.Engine) {
 	router.POST("/fraud-check", c.FraudCheckHandler)
 }
 
+// FraudCheckHandler API
+// @Summary Perform a fraud check
+// @Description Sends a signal to perform a fraud check for a given account.
+// @Tags fraud
+// @Accept json
+// @Produce json
+// @Param request body dtos.FraudCheckRequest true "Fraud check request"
+// @Success 200 {object} map[string]string "{"message": "Fraud check signal sent"}"
+// @Failure 400 {object} map[string]string "{"error": "Bad request"}"
+// @Failure 500 {object} map[string]string "{"error": "Internal server error"}"
+// @Router /fraud-check [post]
 func (c *FraudController) FraudCheckHandler(ctx *gin.Context) {
 	var dto dtos.FraudCheckRequest
 	if err := ctx.ShouldBindJSON(&dto); err != nil {

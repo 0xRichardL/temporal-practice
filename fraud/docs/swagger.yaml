@@ -1,0 +1,48 @@
+definitions:
+  dtos.FraudCheckRequest:
+    properties:
+      is_valid:
+        type: boolean
+      order_id:
+        type: string
+    type: object
+info:
+  contact: {}
+paths:
+  /fraud-check:
+    post:
+      consumes:
+      - application/json
+      description: Sends a signal to perform a fraud check for a given account.
+      parameters:
+      - description: Fraud check request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.FraudCheckRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{"message": "Fraud check signal sent"}'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: '{"error": "Bad request"}'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: '{"error": "Internal server error"}'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Perform a fraud check
+      tags:
+      - fraud
+swagger: "2.0"

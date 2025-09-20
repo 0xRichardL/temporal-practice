@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"os"
 
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/worker"
@@ -15,7 +16,7 @@ import (
 
 func main() {
 	/* DBs: */
-	db, err := gorm.Open(postgres.Open(""), &gorm.Config{})
+	db, err := gorm.Open(postgres.Open(os.Getenv("DB_URI")), &gorm.Config{})
 	if err != nil {
 		panic("failed to connect database")
 	}
@@ -25,7 +26,7 @@ func main() {
 	/* Temporal: */
 	// Connect to Temporal server
 	c, err := client.Dial(client.Options{
-		HostPort: client.DefaultHostPort,
+		HostPort: os.Getenv("TEMPORAL_HOST"),
 	})
 	if err != nil {
 		log.Fatalln("Unable to create client", err)
