@@ -4,6 +4,7 @@
 2. https://docs.temporal.io/develop/go/
 3. https://docs.temporal.io/evaluate/development-production-features/
 4. https://github.com/temporalio/docker-compose
+5. https://grafana.com/docs/k6/latest/set-up/install-k6/
 
 # Targets
 
@@ -15,6 +16,8 @@
    3. Transports:
       1. HTTP.
       2. Temporal signal, work queue.
+   4. Testing:
+      1. Load/performance test: K6.
 
 # Product Requirements
 
@@ -111,6 +114,7 @@ This project emphasizes **using all Temporal features** (workflows, activities, 
 - **Week 2:** Implement Payment Orchestrator with basic validation + debit.
 - **Week 3:** Add retries, signals, queries, timers.
 - **Week 4:** Add child workflow (fraud check), notifications, cancellation, versioning.
+- **Week 5:** Benchmark & testing.
 
 # System design
 
@@ -148,3 +152,17 @@ This project emphasizes **using all Temporal features** (workflows, activities, 
 
 - Query workflow state (pending, processing, success, fail).
 - Send signal to cancel/abort a payment.
+
+# Performance testing
+
+## Load test
+
+### Scenarios
+
+- TODO: To be defined...
+
+## Stress test
+
+### Scenarios
+
+- TODO: To be defined...
