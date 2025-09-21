@@ -27,11 +27,14 @@ services:
       - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development-sql.yaml
       - TEMPORAL_ADDRESS=temporal:7233
       - TEMPORAL_CLI_ADDRESS=temporal:7233
+      - PROMETHEUS_ENDPOINT=temporal:7299
+
     image: temporalio/auto-setup:1.28.1
     networks:
       - internal
     ports:
       - 7233:7233
+      - 7299:7299
     volumes:
       - ./dynamicconfig:/etc/temporal/config/dynamicconfig
 
