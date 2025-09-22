@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"os"
 
@@ -23,6 +24,13 @@ func main() {
 	db.AutoMigrate(&models.Account{})
 	/* Services */
 	accountService := services.NewAccountService(db)
+
+	/* Seeds */
+	// Initialize the test DB with 4 accounts.
+	err = accountService.Seeds(context.Background())
+	if err != nil {
+		panic("failed to seed database.")
+	}
 	/* Temporal: */
 	// Connect to Temporal server
 	c, err := client.Dial(client.Options{

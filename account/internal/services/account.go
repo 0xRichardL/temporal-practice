@@ -2,11 +2,13 @@ package services
 
 import (
 	"context"
+	"fmt"
 
 	"gorm.io/gorm"
 
 	"github.com/0xRichardL/temporal-practice/account/internal/dtos"
 	"github.com/0xRichardL/temporal-practice/account/internal/models"
+	"github.com/0xRichardL/temporal-practice/account/internal/seeds"
 )
 
 type AccountService struct {
@@ -17,6 +19,14 @@ func NewAccountService(db *gorm.DB) *AccountService {
 	return &AccountService{
 		db: db,
 	}
+}
+
+func (s *AccountService) Seeds(ctx context.Context) error {
+	s.db.WithContext(ctx).Exec(fmt.Sprintf("TRUNCATE TABLE %s", models.Account{}.TableName()))
+	if err := gorm.G[models.Account](s.db).CreateInBatches(ctx, &seeds.ACCOUNTS, len(seeds.ACCOUNTS)); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (s *AccountService) ValidateAccount(ctx context.Context, dto dtos.ValidateAccountRequest) (*dtos.ValidateAccountResponse, error) {
