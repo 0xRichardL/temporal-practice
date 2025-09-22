@@ -1,8 +1,8 @@
 package workflows
 
 import (
-	"errors"
 	"log"
+	"time"
 
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/temporal"
@@ -18,6 +18,10 @@ var (
 	PaymentWorkflowTaskQueue = "payment-tasks"
 )
 
+// RegisterPaymentWorkFlow sets up and starts a worker for the payment workflow.
+// In a larger application, it's a good practice to centralize all worker registration
+// and startup logic in a dedicated package or in the main application entry point (e.g., cmd/worker/main.go),
+// rather than coupling it with the workflow definition file.
 func RegisterPaymentWorkFlow(c client.Client) {
 	go func() {
 		w := worker.New(c, PaymentWorkFlowQueue, worker.Options{})
@@ -38,9 +42,16 @@ type PaymentWorkFlowParam struct {
 type PaymentWorkFlowResult struct{}
 
 func PaymentWorkFlowDefinition(ctx workflow.Context, param PaymentWorkFlowParam) (workflowResult *PaymentWorkFlowResult, err error) {
+	// It's a best practice to set a short StartToCloseTimeout that reflects the expected execution time
+	// of a single attempt, and a longer ScheduleToCloseTimeout that accounts for queue time and retries.
+	// Setting them to the same value can cause timeouts if the activity waits in the task queue.
 	ao := workflow.ActivityOptions{
 		TaskQueue:   PaymentWorkflowTaskQueue,
 		RetryPolicy: &temporal.RetryPolicy{MaximumAttempts: 3},
+		// Total time from scheduling to completion, including retries and queue time.
+		ScheduleToCloseTimeout: 1 * time.Minute,
+		// Max time for a single activity execution attempt.
+		StartToCloseTimeout: 10 * time.Second,
 	}
 	ctx = workflow.WithActivityOptions(ctx, ao)
 
@@ -54,6 +65,11 @@ func PaymentWorkFlowDefinition(ctx workflow.Context, param PaymentWorkFlowParam)
 	err = workflow.ExecuteActivity(ctx, activities.ValidateAccountActivityName, validateAccountParam).Get(ctx, &validateAccountActivityResult)
 	if err != nil {
 		return nil, err
+	}
+	if !validateAccountActivityResult.Valid {
+		// If validation fails, we return a business-level (Application) error.
+		// This error will not be retried by default and clearly indicates a business rule failure.
+		return nil, temporal.NewApplicationError("account validation failed", "ValidationFailure")
 	}
 	// Step 2: Debit account
 	debitParam := activities.DebitActivityParam{
@@ -69,11 +85,27 @@ func PaymentWorkFlowDefinition(ctx workflow.Context, param PaymentWorkFlowParam)
 	// The Defer functions chain will work as SAGA compensation queue.
 	defer func() {
 		if err != nil {
-			comErr := workflow.ExecuteActivity(ctx, activities.CreditActivityName, activities.CreditActivityParam{
+			// SAGA compensation logic.
+			// If the workflow fails after the debit, we must credit the account back.
+			// This compensation logic should be very robust. We'll use a new disconnected context
+			// with a more aggressive retry policy to ensure the credit succeeds, even if the workflow is cancelled.
+			disCtx, _ := workflow.NewDisconnectedContext(ctx)
+
+			compensationCtx := workflow.WithActivityOptions(disCtx, workflow.ActivityOptions{
+				TaskQueue:           PaymentWorkflowTaskQueue,
+				StartToCloseTimeout: 20 * time.Second, // Give compensation a bit more time per attempt.
+				RetryPolicy: &temporal.RetryPolicy{
+					InitialInterval:    time.Second,
+					BackoffCoefficient: 2.0,
+					MaximumInterval:    time.Minute,
+					MaximumAttempts:    10, // Retry compensation more aggressively.
+				},
+			})
+			comErr := workflow.ExecuteActivity(compensationCtx, activities.CreditActivityName, activities.CreditActivityParam{
 				AccountID: param.AccountID,
 				Amount:    param.Amount,
-			}).Get(ctx, nil)
-			multierr.Append(err, comErr)
+			}).Get(compensationCtx, nil)
+			err = multierr.Append(err, comErr)
 		}
 	}()
 
@@ -89,7 +121,8 @@ func PaymentWorkFlowDefinition(ctx workflow.Context, param PaymentWorkFlowParam)
 		return nil, err
 	}
 	if !fraudCheckResult.IsValid {
-		return nil, errors.New("fraud check failed")
+		// The SAGA compensation will be triggered by this error.
+		return nil, temporal.NewApplicationError("fraud check failed", "FraudCheckFailure")
 	}
 
 	// Step 4: Send user a notification of the payment.

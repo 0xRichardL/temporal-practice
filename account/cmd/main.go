@@ -41,8 +41,8 @@ func main() {
 	}
 	defer c.Close()
 	w := worker.New(c, "account-tasks", worker.Options{})
-	AccountActivities := temporal.NewAccountActivities(accountService)
-	AccountActivities.Register(w)
+	accountActivities := temporal.NewAccountActivities(accountService)
+	accountActivities.Register(w)
 	err = w.Run(worker.InterruptCh())
 	if err != nil {
 		log.Fatalln("Unable to start Worker", err)

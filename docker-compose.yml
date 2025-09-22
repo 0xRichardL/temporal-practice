@@ -110,16 +110,19 @@ services:
       - postgres
       - temporal
 
-  # notification:
-  #   ports:
-  #     - 8003:8080
-  #   networks:
-  #     - internal
-  #   build:
-  #     context: ./notification
-  #     dockerfile: ../Dockerfile
-  #   depends_on:
-  #     - postgres
+  notification:
+    environment:
+      - TEMPORAL_HOST=temporal:7233
+    ports:
+      - 8003:8080
+    networks:
+      - internal
+    build:
+      context: ./notification
+      dockerfile: ../Dockerfile
+    restart: always
+    depends_on:
+      - postgres
 
   payment:
     environment:

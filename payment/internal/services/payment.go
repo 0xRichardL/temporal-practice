@@ -32,7 +32,7 @@ func (s *PaymentService) CreatePayment(ctx context.Context, param dtos.PaymentRe
 		ctx,
 		workflowOptions,
 		workflows.PaymentWorkFlowDefinition,
-		&workflows.PaymentWorkFlowParam{
+		workflows.PaymentWorkFlowParam{
 			OrderID:   orderID,
 			AccountID: param.AccountID,
 			Amount:    param.Amount,
