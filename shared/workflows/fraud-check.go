@@ -1,13 +1,18 @@
 package workflows
 
 import (
+	"go.temporal.io/sdk/worker"
 	"go.temporal.io/sdk/workflow"
 )
 
 var (
-	FraudCheckTaskQueue  = "fraud-check-tasks"
-	FraudCheckSignalName = "fraud-check"
+	FraudCheckWorkflowTaskQueue = "fraud-check-tasks"
+	FraudCheckSignalName        = "fraud-check"
 )
+
+func RegisterFraudCheckWorkflow(w worker.Worker) {
+	w.RegisterWorkflowWithOptions(FraudCheckWorkflowDefinition, workflow.RegisterOptions{Name: "FraudCheckWorkflow"})
+}
 
 type FraudCheckWorkflowParam struct {
 	OrderID string

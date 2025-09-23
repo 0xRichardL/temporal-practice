@@ -6,6 +6,7 @@ type PaymentRequest struct {
 }
 
 type PaymentResponse struct {
+	OrderID    string `json:"order_id"`
 	WorkflowID string `json:"workflow_id"`
 	RunID      string `json:"run_id"`
 }

@@ -6,6 +6,8 @@ import (
 	"go.temporal.io/sdk/worker"
 )
 
+var AccountActivityTaskQueue = "account-activity-tasks"
+
 var ValidateAccountActivityName = "account::validate"
 
 type ValidateAccountActivityParam struct {

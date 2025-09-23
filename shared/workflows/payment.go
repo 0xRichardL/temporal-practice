@@ -1,10 +1,8 @@
 package workflows
 
 import (
-	"log"
 	"time"
 
-	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/worker"
 	"go.temporal.io/sdk/workflow"
@@ -14,23 +12,11 @@ import (
 )
 
 var (
-	PaymentWorkFlowQueue     = "payments"
 	PaymentWorkflowTaskQueue = "payment-tasks"
 )
 
-// RegisterPaymentWorkFlow sets up and starts a worker for the payment workflow.
-// In a larger application, it's a good practice to centralize all worker registration
-// and startup logic in a dedicated package or in the main application entry point (e.g., cmd/worker/main.go),
-// rather than coupling it with the workflow definition file.
-func RegisterPaymentWorkFlow(c client.Client) {
-	go func() {
-		w := worker.New(c, PaymentWorkFlowQueue, worker.Options{})
-		w.RegisterWorkflow(PaymentWorkFlowDefinition)
-
-		if err := w.Run(worker.InterruptCh()); err != nil {
-			log.Fatalln("Unable to start PaymentWorkflow worker", err)
-		}
-	}()
+func RegisterPaymentWorkflow(w worker.Worker) {
+	w.RegisterWorkflowWithOptions(PaymentWorkFlowDefinition, workflow.RegisterOptions{Name: "PaymentWorkflow"})
 }
 
 type PaymentWorkFlowParam struct {
@@ -42,18 +28,23 @@ type PaymentWorkFlowParam struct {
 type PaymentWorkFlowResult struct{}
 
 func PaymentWorkFlowDefinition(ctx workflow.Context, param PaymentWorkFlowParam) (workflowResult *PaymentWorkFlowResult, err error) {
-	// It's a best practice to set a short StartToCloseTimeout that reflects the expected execution time
-	// of a single attempt, and a longer ScheduleToCloseTimeout that accounts for queue time and retries.
-	// Setting them to the same value can cause timeouts if the activity waits in the task queue.
-	ao := workflow.ActivityOptions{
-		TaskQueue:   PaymentWorkflowTaskQueue,
-		RetryPolicy: &temporal.RetryPolicy{MaximumAttempts: 3},
-		// Total time from scheduling to completion, including retries and queue time.
+	// Define activity options for account-related activities.
+	accountActivityOpts := workflow.ActivityOptions{
+		TaskQueue:              activities.AccountActivityTaskQueue,
+		RetryPolicy:            &temporal.RetryPolicy{MaximumAttempts: 3},
 		ScheduleToCloseTimeout: 1 * time.Minute,
-		// Max time for a single activity execution attempt.
-		StartToCloseTimeout: 10 * time.Second,
+		StartToCloseTimeout:    10 * time.Second,
 	}
-	ctx = workflow.WithActivityOptions(ctx, ao)
+	accountCtx := workflow.WithActivityOptions(ctx, accountActivityOpts)
+
+	// Define activity options for notification-related activities.
+	notificationActivityOpts := workflow.ActivityOptions{
+		TaskQueue:              activities.NotificationActivityTaskQueue,
+		RetryPolicy:            &temporal.RetryPolicy{MaximumAttempts: 3},
+		ScheduleToCloseTimeout: 1 * time.Minute,
+		StartToCloseTimeout:    10 * time.Second,
+	}
+	notificationCtx := workflow.WithActivityOptions(ctx, notificationActivityOpts)
 
 	// WORKFLOW'S STEPS:
 	// Step 1: Validate account
@@ -62,7 +53,7 @@ func PaymentWorkFlowDefinition(ctx workflow.Context, param PaymentWorkFlowParam)
 		Amount:    param.Amount,
 	}
 	validateAccountActivityResult := activities.ValidateAccountActivityResult{}
-	err = workflow.ExecuteActivity(ctx, activities.ValidateAccountActivityName, validateAccountParam).Get(ctx, &validateAccountActivityResult)
+	err = workflow.ExecuteActivity(accountCtx, activities.ValidateAccountActivityName, validateAccountParam).Get(ctx, &validateAccountActivityResult)
 	if err != nil {
 		return nil, err
 	}
@@ -77,7 +68,7 @@ func PaymentWorkFlowDefinition(ctx workflow.Context, param PaymentWorkFlowParam)
 		Amount:    param.Amount,
 	}
 	debitActivityResult := activities.DebitActivityResult{}
-	err = workflow.ExecuteActivity(ctx, activities.DebitActivityName, debitParam).Get(ctx, &debitActivityResult)
+	err = workflow.ExecuteActivity(accountCtx, activities.DebitActivityName, debitParam).Get(ctx, &debitActivityResult)
 	if err != nil {
 		return nil, err
 	}
@@ -92,8 +83,9 @@ func PaymentWorkFlowDefinition(ctx workflow.Context, param PaymentWorkFlowParam)
 			disCtx, _ := workflow.NewDisconnectedContext(ctx)
 
 			compensationCtx := workflow.WithActivityOptions(disCtx, workflow.ActivityOptions{
-				TaskQueue:           PaymentWorkflowTaskQueue,
-				StartToCloseTimeout: 20 * time.Second, // Give compensation a bit more time per attempt.
+				TaskQueue:              activities.AccountActivityTaskQueue,
+				ScheduleToCloseTimeout: 5 * time.Minute,  // Must be set when RetryPolicy is present.
+				StartToCloseTimeout:    20 * time.Second, // Give compensation a bit more time per attempt.
 				RetryPolicy: &temporal.RetryPolicy{
 					InitialInterval:    time.Second,
 					BackoffCoefficient: 2.0,
@@ -114,7 +106,7 @@ func PaymentWorkFlowDefinition(ctx workflow.Context, param PaymentWorkFlowParam)
 	var fraudCheckResult FraudCheckWorkflowResult
 	fraudCheckCtx := workflow.WithChildOptions(ctx, workflow.ChildWorkflowOptions{
 		WorkflowID: "fraud-check-" + param.OrderID,
-		TaskQueue:  FraudCheckTaskQueue,
+		TaskQueue:  FraudCheckWorkflowTaskQueue,
 	})
 	err = workflow.ExecuteChildWorkflow(fraudCheckCtx, FraudCheckWorkflowDefinition, FraudCheckWorkflowParam{OrderID: param.OrderID}).Get(ctx, &fraudCheckResult)
 	if err != nil {
@@ -126,7 +118,7 @@ func PaymentWorkFlowDefinition(ctx workflow.Context, param PaymentWorkFlowParam)
 	}
 
 	// Step 4: Send user a notification of the payment.
-	err = workflow.ExecuteActivity(ctx, activities.NotifyPaymentActivityName, activities.NotifyPaymentActivityParam{
+	err = workflow.ExecuteActivity(notificationCtx, activities.NotifyPaymentActivityName, activities.NotifyPaymentActivityParam{
 		AccountID: param.AccountID,
 		Amount:    param.Amount,
 	}).Get(ctx, nil)

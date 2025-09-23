@@ -6,6 +6,8 @@ import (
 	"go.temporal.io/sdk/worker"
 )
 
+var NotificationActivityTaskQueue = "notification-activity-tasks"
+
 var NotifyPaymentActivityName = "notification::payment:notify"
 
 type NotifyPaymentActivityParam struct {

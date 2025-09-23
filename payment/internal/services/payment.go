@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"go.temporal.io/sdk/client"
@@ -25,8 +26,11 @@ func (s *PaymentService) CreatePayment(ctx context.Context, param dtos.PaymentRe
 	orderID := uuid.New().String()
 	workflowID := fmt.Sprintf("payment-%s", uuid.New().String())
 	workflowOptions := client.StartWorkflowOptions{
-		ID:        workflowID,
-		TaskQueue: workflows.PaymentWorkFlowQueue,
+		ID:                       workflowID,
+		TaskQueue:                workflows.PaymentWorkflowTaskQueue,
+		WorkflowExecutionTimeout: 15 * time.Minute,
+		WorkflowRunTimeout:       15 * time.Minute,
+		WorkflowTaskTimeout:      10 * time.Second,
 	}
 	wRun, err := s.temporalClient.ExecuteWorkflow(
 		ctx,
@@ -42,7 +46,11 @@ func (s *PaymentService) CreatePayment(ctx context.Context, param dtos.PaymentRe
 		return nil, err
 	}
 
-	return &dtos.PaymentResponse{WorkflowID: workflowID, RunID: wRun.GetRunID()}, nil
+	return &dtos.PaymentResponse{
+		OrderID:    orderID,
+		WorkflowID: workflowID,
+		RunID:      wRun.GetRunID(),
+	}, nil
 }
 
 func (s *PaymentService) FraudCheck(ctx context.Context, param dtos.FraudCheckRequest) error {

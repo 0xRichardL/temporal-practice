@@ -7,10 +7,6 @@ import (
 	"github.com/0xRichardL/temporal-practice/notification/internal/dtos"
 )
 
-const (
-	TaskQueue = "NOTIFICATION_TASK_QUEUE"
-)
-
 type NotificationService struct {
 }
 
