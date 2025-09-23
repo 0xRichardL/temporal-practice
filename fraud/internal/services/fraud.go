@@ -19,5 +19,7 @@ func NewFraudService(temporalClient client.Client) *FraudService {
 }
 
 func (s *FraudService) Check(ctx context.Context, dto dtos.FraudCheckRequest) error {
-	return s.temporalClient.SignalWorkflow(ctx, "fraud-check-"+dto.OrderID, "", workflows.FraudCheckSignalName, workflows.FraudCheckWorkflowResult{IsValid: true})
+	return s.temporalClient.SignalWorkflow(ctx, "fraud-check-"+dto.OrderID, "", workflows.FraudCheckSignalName, workflows.FraudCheckWorkflowResult{
+		IsValid: dto.IsValid,
+	})
 }

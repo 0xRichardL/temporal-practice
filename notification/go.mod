@@ -3,7 +3,7 @@ module github.com/0xRichardL/temporal-practice/notification
 go 1.25.1
 
 require (
-	github.com/0xRichardL/temporal-practice/shared v0.0.0-20250922152338-7c9d7e05d677
+	github.com/0xRichardL/temporal-practice/shared v0.0.0-20250923140828-cee62f8fa935
 	go.temporal.io/sdk v1.36.0
 )
 

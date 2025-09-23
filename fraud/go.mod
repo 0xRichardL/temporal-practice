@@ -3,7 +3,7 @@ module github.com/0xRichardL/temporal-practice/fraud
 go 1.25.1
 
 require (
-	github.com/0xRichardL/temporal-practice/shared v0.0.0-20250918143331-d77cd7c1ba26
+	github.com/0xRichardL/temporal-practice/shared v0.0.0-20250923140828-cee62f8fa935
 	github.com/gin-gonic/gin v1.10.1
 	github.com/swaggo/files v1.0.1
 	github.com/swaggo/gin-swagger v1.6.1

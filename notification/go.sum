@@ -1,5 +1,5 @@
-github.com/0xRichardL/temporal-practice/shared v0.0.0-20250922152338-7c9d7e05d677 h1:45ohB41ePGqvsKHs6ccmIZC4lGCWctstdmH33KevEa0=
-github.com/0xRichardL/temporal-practice/shared v0.0.0-20250922152338-7c9d7e05d677/go.mod h1:J2bDlJYVYKDznJ80pVEufOAdlbCNude2LUok+KL8GsU=
+github.com/0xRichardL/temporal-practice/shared v0.0.0-20250923140828-cee62f8fa935 h1:7lKBnG0QVjl8xUEjzkFHaEaH4mdcbF0e6ogIGoD/+So=
+github.com/0xRichardL/temporal-practice/shared v0.0.0-20250923140828-cee62f8fa935/go.mod h1:J2bDlJYVYKDznJ80pVEufOAdlbCNude2LUok+KL8GsU=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/facebookgo/clock v0.0.0-20150410010913-600d898af40a h1:yDWHCSQ40h88yih2JAcL6Ls/kVkSE8GFACTGVnMPruw=

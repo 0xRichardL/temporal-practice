@@ -30,7 +30,7 @@ func (s *AccountService) Seeds(ctx context.Context) error {
 }
 
 func (s *AccountService) ValidateAccount(ctx context.Context, dto dtos.ValidateAccountRequest) (*dtos.ValidateAccountResponse, error) {
-	bln, err := gorm.G[models.Account](s.db).Where("account_id = ?", dto.AccountID).First(ctx)
+	bln, err := gorm.G[models.Account](s.db).Where("id = ?", dto.AccountID).First(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -39,7 +39,7 @@ func (s *AccountService) ValidateAccount(ctx context.Context, dto dtos.ValidateA
 
 func (s *AccountService) Debit(ctx context.Context, dto dtos.DebitRequest) (*dtos.DebitResponse, error) {
 	var acc models.Account
-	if err := s.db.WithContext(ctx).Where("account_id = ?", dto.AccountID).First(&acc).Error; err != nil {
+	if err := s.db.WithContext(ctx).Where("id = ?", dto.AccountID).First(&acc).Error; err != nil {
 		return nil, err
 	}
 	if acc.Balance < dto.Amount {
@@ -53,7 +53,7 @@ func (s *AccountService) Debit(ctx context.Context, dto dtos.DebitRequest) (*dto
 
 func (s *AccountService) Credit(ctx context.Context, dto dtos.CreditRequest) (*dtos.CreditResponse, error) {
 	var acc models.Account
-	if err := s.db.WithContext(ctx).Where("account_id = ?", dto.AccountID).First(&acc).Error; err != nil {
+	if err := s.db.WithContext(ctx).Where("id = ?", dto.AccountID).First(&acc).Error; err != nil {
 		return nil, err
 	}
 	if err := s.db.Model(&acc).Update("balance", acc.Balance+dto.Amount).Error; err != nil {

@@ -35,7 +35,6 @@ func main() {
 	fraudController.RegisterRoutes(r)
 	/// Swagger:
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
-	r.GET("/swagger/", func(c *gin.Context) { c.Redirect(301, "/swagger/index.html") })
 	// Start worker at another routine.
 	go func() {
 		err = w.Run(worker.InterruptCh())

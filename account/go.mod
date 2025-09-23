@@ -3,7 +3,7 @@ module github.com/0xRichardL/temporal-practice/account
 go 1.25.1
 
 require (
-	github.com/0xRichardL/temporal-practice/shared v0.0.0-20250918143331-d77cd7c1ba26
+	github.com/0xRichardL/temporal-practice/shared v0.0.0-20250923140828-cee62f8fa935
 	go.temporal.io/sdk v1.36.0
 	gorm.io/driver/postgres v1.6.0
 	gorm.io/gorm v1.31.0
