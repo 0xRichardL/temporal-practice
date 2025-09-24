@@ -5,7 +5,7 @@ import (
 	"go.temporal.io/sdk/workflow"
 )
 
-var (
+const (
 	FraudCheckWorkflowTaskQueue = "fraud-check-tasks"
 	FraudCheckSignalName        = "fraud-check"
 )

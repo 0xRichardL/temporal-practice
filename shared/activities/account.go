@@ -6,9 +6,9 @@ import (
 	"go.temporal.io/sdk/worker"
 )
 
-var AccountActivityTaskQueue = "account-activity-tasks"
+const AccountActivityTaskQueue = "account-activity-tasks"
 
-var ValidateAccountActivityName = "account::validate"
+const ValidateAccountActivityName = "account::validate"
 
 type ValidateAccountActivityParam struct {
 	AccountID string
@@ -19,7 +19,7 @@ type ValidateAccountActivityResult struct {
 	Valid bool
 }
 
-var DebitActivityName = "account::debit"
+const DebitActivityName = "account::debit"
 
 type DebitActivityParam struct {
 	AccountID string
@@ -30,7 +30,7 @@ type DebitActivityResult struct {
 	Balance int64
 }
 
-var CreditActivityName = "account::credit"
+const CreditActivityName = "account::credit"
 
 type CreditActivityParam struct {
 	AccountID string

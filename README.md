@@ -88,12 +88,12 @@ This project emphasizes **using all Temporal features** (workflows, activities, 
 | ------ | ---------------------------------- | ----------------------- | ----------------------------- |
 | ✅     | FR-1: Payment orchestration        | Workflow                | Central payment flow          |
 | ✅     | FR-2: Validation, debit, credit    | Activities              | Simple DB ops                 |
-|        | FR-3: Retry external call          | Activity + Retry Policy | Retry w/ exponential backoff  |
+| ✅     | FR-3: Retry external call          | Activity + Retry Policy | Retry w/ exponential backoff  |
 | ✅     | FR-4: Fraud check                  | Child Workflow          | Runs async, result awaited    |
 | ✅     | FR-5: Async gateway confirmation   | Signals                 | Handle external callbacks     |
-|        | FR-6: Timeout waiting for callback | Timers                  | Fail if >5 min                |
+| ✅     | FR-6: Timeout waiting for callback | Timers                  | Fail if >5 min                |
 | ✅     | FR-7: Notification                 | Activity + Side Effect  | External email service        |
-|        | FR-8: Query payment status         | Query Handler           | Return current workflow state |
+| ✅     | FR-8: Query payment status         | Query Handler           | Return current workflow state |
 |        | FR-9: Cancel payment               | Signal Handler          | Abort gracefully              |
 |        | FR-10: Workflow upgrades           | Versioning API          | Add new steps safely          |
 

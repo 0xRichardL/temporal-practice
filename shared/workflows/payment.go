@@ -11,8 +11,17 @@ import (
 	"github.com/0xRichardL/temporal-practice/shared/activities"
 )
 
-var (
-	PaymentWorkflowTaskQueue = "payment-tasks"
+const (
+	PaymentWorkflowTaskQueue        = "payment-tasks"
+	PaymentWorkflowQueryCurrentStep = "current-step"
+)
+
+const (
+	PaymentStepInitialize      = "payment-step::initialize"
+	PaymentStepValidateAccount = "payment-step::validate-account"
+	PaymentStepDebitAccount    = "payment-step::debit-account"
+	PaymentStepFraudCheck      = "payment-step::fraud-check"
+	PaymentStepNotifyUser      = "payment-step::notify-user"
 )
 
 func RegisterPaymentWorkflow(w worker.Worker) {
@@ -28,6 +37,7 @@ type PaymentWorkFlowParam struct {
 type PaymentWorkFlowResult struct{}
 
 func PaymentWorkFlowDefinition(ctx workflow.Context, param PaymentWorkFlowParam) (workflowResult *PaymentWorkFlowResult, err error) {
+	/// WORKFLOW CONFIG:
 	// Define activity options for account-related activities.
 	accountActivityOpts := workflow.ActivityOptions{
 		TaskQueue:              activities.AccountActivityTaskQueue,
@@ -45,19 +55,33 @@ func PaymentWorkFlowDefinition(ctx workflow.Context, param PaymentWorkFlowParam)
 		StartToCloseTimeout:    10 * time.Second,
 	}
 	notificationCtx := workflow.WithActivityOptions(ctx, notificationActivityOpts)
+	// Define the main selector for all async tasks.
+	selector := workflow.NewSelector(ctx)
 
-	// WORKFLOW'S STEPS:
+	/// WORKFLOW STATES:
+	var currentStep = PaymentStepInitialize
+
+	/// WORKFLOW QUERIES:
+	err = workflow.SetQueryHandler(ctx, PaymentWorkflowQueryCurrentStep, func() (string, error) {
+		return currentStep, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	/// WORKFLOW STEPS:
 	// Step 1: Validate account
+	currentStep = PaymentStepValidateAccount
 	validateAccountParam := activities.ValidateAccountActivityParam{
 		AccountID: param.AccountID,
 		Amount:    param.Amount,
 	}
-	validateAccountActivityResult := activities.ValidateAccountActivityResult{}
-	err = workflow.ExecuteActivity(accountCtx, activities.ValidateAccountActivityName, validateAccountParam).Get(ctx, &validateAccountActivityResult)
+	validateAccountResult := activities.ValidateAccountActivityResult{}
+	err = workflow.ExecuteActivity(accountCtx, activities.ValidateAccountActivityName, validateAccountParam).Get(ctx, &validateAccountResult)
 	if err != nil {
 		return nil, err
 	}
-	if !validateAccountActivityResult.Valid {
+	if !validateAccountResult.Valid {
 		// If validation fails, we return a business-level (Application) error.
 		// This error will not be retried by default and clearly indicates a business rule failure.
 		return nil, temporal.NewApplicationError("account validation failed", "ValidationFailure")
@@ -67,8 +91,8 @@ func PaymentWorkFlowDefinition(ctx workflow.Context, param PaymentWorkFlowParam)
 		AccountID: param.AccountID,
 		Amount:    param.Amount,
 	}
-	debitActivityResult := activities.DebitActivityResult{}
-	err = workflow.ExecuteActivity(accountCtx, activities.DebitActivityName, debitParam).Get(ctx, &debitActivityResult)
+	debitResult := activities.DebitActivityResult{}
+	err = workflow.ExecuteActivity(accountCtx, activities.DebitActivityName, debitParam).Get(ctx, &debitResult)
 	if err != nil {
 		return nil, err
 	}
@@ -108,7 +132,17 @@ func PaymentWorkFlowDefinition(ctx workflow.Context, param PaymentWorkFlowParam)
 		WorkflowID: "fraud-check-" + param.OrderID,
 		TaskQueue:  FraudCheckWorkflowTaskQueue,
 	})
-	err = workflow.ExecuteChildWorkflow(fraudCheckCtx, FraudCheckWorkflowDefinition, FraudCheckWorkflowParam{OrderID: param.OrderID}).Get(ctx, &fraudCheckResult)
+	fraudCheckFuture := workflow.ExecuteChildWorkflow(fraudCheckCtx, FraudCheckWorkflowDefinition, FraudCheckWorkflowParam{OrderID: param.OrderID})
+	fraudCheckTimer := workflow.NewTimer(ctx, 10*time.Minute)
+	selector.AddFuture(fraudCheckFuture, func(f workflow.Future) {
+		err = f.Get(ctx, &fraudCheckResult)
+	})
+	selector.AddFuture(fraudCheckTimer, func(_ workflow.Future) {
+		// Timer fired, which means the fraud check timed out.
+		// The SAGA compensation will be triggered by this error.
+		err = temporal.NewApplicationError("fraud check timed out", "FraudCheckTimeout")
+	})
+	selector.Select(ctx) // Wait for either fraud check to complete or timeout.
 	if err != nil {
 		return nil, err
 	}
