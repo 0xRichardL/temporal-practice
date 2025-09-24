@@ -1,18 +1,20 @@
 package dtos
 
-type PaymentRequest struct {
+type CreatePaymentRequest struct {
 	AccountID string `json:"account_id"`
 	Amount    int64  `json:"amount"`
 }
 
-type PaymentResponse struct {
+type CreatePaymentResponse struct {
 	OrderID    string `json:"order_id"`
 	WorkflowID string `json:"workflow_id"`
 	RunID      string `json:"run_id"`
 }
 
-type FraudCheckRequest struct {
-	AccountID string `json:"account_id"`
-	PaymentID string `json:"payment_id"`
-	IsValid   bool   `json:"is_valid"`
+type GetPaymentStatusRequest struct {
+	WorkflowID string `uri:"workflowID" binding:"required"`
+}
+
+type GetPaymentStatusResponse struct {
+	Status string `json:"status"`
 }

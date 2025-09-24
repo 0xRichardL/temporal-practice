@@ -35,7 +35,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dtos.PaymentRequest"
+                            "$ref": "#/definitions/dtos.CreatePaymentRequest"
                         }
                     }
                 ],
@@ -43,7 +43,57 @@ const docTemplate = `{
                     "200": {
                         "description": "Payment created successfully",
                         "schema": {
-                            "$ref": "#/definitions/dtos.PaymentResponse"
+                            "$ref": "#/definitions/dtos.CreatePaymentResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "{\"error\": \"Bad request\"}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "{\"error\": \"Internal server error\"}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/payment/{workflowID}/status": {
+            "get": {
+                "description": "Gets the status of a payment.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "payment"
+                ],
+                "summary": "Get payment status",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Workflow ID",
+                        "name": "workflowID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Payment status retrieved successfully",
+                        "schema": {
+                            "$ref": "#/definitions/dtos.GetPaymentStatusResponse"
                         }
                     },
                     "400": {
@@ -69,7 +119,7 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "dtos.PaymentRequest": {
+        "dtos.CreatePaymentRequest": {
             "type": "object",
             "properties": {
                 "account_id": {
@@ -80,13 +130,24 @@ const docTemplate = `{
                 }
             }
         },
-        "dtos.PaymentResponse": {
+        "dtos.CreatePaymentResponse": {
             "type": "object",
             "properties": {
+                "order_id": {
+                    "type": "string"
+                },
                 "run_id": {
                     "type": "string"
                 },
                 "workflow_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "dtos.GetPaymentStatusResponse": {
+            "type": "object",
+            "properties": {
+                "status": {
                     "type": "string"
                 }
             }

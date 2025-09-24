@@ -2,7 +2,7 @@
 # Makefile for managing docker-compose services
 
 # Use .PHONY to ensure these targets run even if files with the same name exist. It also improves performance.
-.PHONY: help up down clean build rebuild logs ps restart tctl mod-tidy \
+.PHONY: help up down clean build rebuild logs ps restart tctl mod-tidy mod-update-shared \
         _build _rebuild _logs _restart _tctl
 
 # Default target when no command is specified.
@@ -71,4 +71,14 @@ mod-tidy:
 		dir=$$(dirname "$$file"); \
 		echo "==> Tidying in $$dir"; \
 		(cd "$$dir" && go mod tidy); \
+	done
+
+mod-update-shared:
+	@echo "Updating shared module in all Go modules..."
+	@find . -name go.mod -print | while read -r file; do \
+		dir=$$(dirname "$$file"); \
+		if [ "$$dir" != "./shared" ]; then \
+			echo "==> Updating shared module in $$dir"; \
+			(cd "$$dir" && go get -u github.com/0xRichardL/temporal-practice/shared); \
+		fi; \
 	done

@@ -1,5 +1,7 @@
-github.com/0xRichardL/temporal-practice/shared v0.0.0-20250923140828-cee62f8fa935 h1:7lKBnG0QVjl8xUEjzkFHaEaH4mdcbF0e6ogIGoD/+So=
-github.com/0xRichardL/temporal-practice/shared v0.0.0-20250923140828-cee62f8fa935/go.mod h1:J2bDlJYVYKDznJ80pVEufOAdlbCNude2LUok+KL8GsU=
+github.com/0xRichardL/temporal-practice/shared v0.0.0-20250923145831-531a36b76fac h1:pn+ahDTNW4Kk7aHz8TSk63FNtvORbIRiCctjsywIOpc=
+github.com/0xRichardL/temporal-practice/shared v0.0.0-20250923145831-531a36b76fac/go.mod h1:J2bDlJYVYKDznJ80pVEufOAdlbCNude2LUok+KL8GsU=
+github.com/0xRichardL/temporal-practice/shared v0.0.0-20250924151548-9f50c6dd0400 h1:doKUdXz3MzKehc12vOT2OfXzI/YBJFkEv05yZyxjU1A=
+github.com/0xRichardL/temporal-practice/shared v0.0.0-20250924151548-9f50c6dd0400/go.mod h1:J2bDlJYVYKDznJ80pVEufOAdlbCNude2LUok+KL8GsU=
 github.com/KyleBanks/depth v1.2.1 h1:5h8fQADFrWtarTdtDudMmGsC7GPbOAu6RVB3ffsVFHc=
 github.com/KyleBanks/depth v1.2.1/go.mod h1:jzSb9d0L43HxTQfT+oSA1EEp2q+ne2uh6XgeJcm8brE=
 github.com/bytedance/gopkg v0.1.3 h1:TPBSwH8RsouGCBcMBktLt1AymVo2TVsBVCY4b6TnZ/M=

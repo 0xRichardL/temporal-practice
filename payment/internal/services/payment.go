@@ -22,7 +22,7 @@ func NewPaymentService(temporalClient client.Client) *PaymentService {
 	}
 }
 
-func (s *PaymentService) CreatePayment(ctx context.Context, param dtos.PaymentRequest) (*dtos.PaymentResponse, error) {
+func (s *PaymentService) CreatePayment(ctx context.Context, param dtos.CreatePaymentRequest) (*dtos.CreatePaymentResponse, error) {
 	orderID := uuid.New().String()
 	workflowID := fmt.Sprintf("payment-%s", uuid.New().String())
 	workflowOptions := client.StartWorkflowOptions{
@@ -46,13 +46,23 @@ func (s *PaymentService) CreatePayment(ctx context.Context, param dtos.PaymentRe
 		return nil, err
 	}
 
-	return &dtos.PaymentResponse{
+	return &dtos.CreatePaymentResponse{
 		OrderID:    orderID,
 		WorkflowID: workflowID,
 		RunID:      wRun.GetRunID(),
 	}, nil
 }
 
-func (s *PaymentService) FraudCheck(ctx context.Context, param dtos.FraudCheckRequest) error {
-	return nil
+func (s *PaymentService) GetPaymentStatus(ctx context.Context, dto dtos.GetPaymentStatusRequest) (*dtos.GetPaymentStatusResponse, error) {
+	currentStepResult, err := s.temporalClient.QueryWorkflow(ctx, dto.WorkflowID, "", workflows.PaymentWorkflowQueryCurrentStep)
+	if err != nil {
+		return nil, err
+	}
+	var step string
+	if err := currentStepResult.Get(&step); err != nil {
+		return nil, fmt.Errorf("Unable to get payment status: %w", err)
+	}
+	return &dtos.GetPaymentStatusResponse{
+		Status: step,
+	}, nil
 }

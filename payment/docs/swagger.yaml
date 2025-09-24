@@ -1,16 +1,23 @@
 definitions:
-  dtos.PaymentRequest:
+  dtos.CreatePaymentRequest:
     properties:
       account_id:
         type: string
       amount:
         type: integer
     type: object
-  dtos.PaymentResponse:
+  dtos.CreatePaymentResponse:
     properties:
+      order_id:
+        type: string
       run_id:
         type: string
       workflow_id:
+        type: string
+    type: object
+  dtos.GetPaymentStatusResponse:
+    properties:
+      status:
         type: string
     type: object
 info:
@@ -27,14 +34,14 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/dtos.PaymentRequest'
+          $ref: '#/definitions/dtos.CreatePaymentRequest'
       produces:
       - application/json
       responses:
         "200":
           description: Payment created successfully
           schema:
-            $ref: '#/definitions/dtos.PaymentResponse'
+            $ref: '#/definitions/dtos.CreatePaymentResponse'
         "400":
           description: '{"error": "Bad request"}'
           schema:
@@ -48,6 +55,39 @@ paths:
               type: string
             type: object
       summary: Create a new payment
+      tags:
+      - payment
+  /payment/{workflowID}/status:
+    get:
+      consumes:
+      - application/json
+      description: Gets the status of a payment.
+      parameters:
+      - description: Workflow ID
+        in: path
+        name: workflowID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Payment status retrieved successfully
+          schema:
+            $ref: '#/definitions/dtos.GetPaymentStatusResponse'
+        "400":
+          description: '{"error": "Bad request"}'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: '{"error": "Internal server error"}'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get payment status
       tags:
       - payment
 swagger: "2.0"
