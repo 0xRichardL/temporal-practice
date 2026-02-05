@@ -1,6 +1,7 @@
 package workflows
 
 import (
+	"fmt"
 	"time"
 
 	"go.temporal.io/sdk/temporal"
@@ -90,6 +91,7 @@ func PaymentWorkFlowDefinition(ctx workflow.Context, param PaymentWorkFlowParam)
 	debitParam := activities.DebitActivityParam{
 		AccountID: param.AccountID,
 		Amount:    param.Amount,
+		Reason:    fmt.Sprintf("PAYMENT-%s", param.OrderID),
 	}
 	debitResult := activities.DebitActivityResult{}
 	err = workflow.ExecuteActivity(accountCtx, activities.DebitActivityName, debitParam).Get(ctx, &debitResult)
@@ -117,10 +119,12 @@ func PaymentWorkFlowDefinition(ctx workflow.Context, param PaymentWorkFlowParam)
 					MaximumAttempts:    10, // Retry compensation more aggressively.
 				},
 			})
-			comErr := workflow.ExecuteActivity(compensationCtx, activities.CreditActivityName, activities.CreditActivityParam{
+			creditParam := activities.CreditActivityParam{
 				AccountID: param.AccountID,
 				Amount:    param.Amount,
-			}).Get(compensationCtx, nil)
+				Reason:    fmt.Sprintf("REFUND-%s", param.OrderID),
+			}
+			comErr := workflow.ExecuteActivity(compensationCtx, activities.CreditActivityName, creditParam).Get(compensationCtx, nil)
 			err = multierr.Append(err, comErr)
 		}
 	}()

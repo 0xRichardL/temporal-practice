@@ -57,6 +57,7 @@ func (s *AccountService) Debit(ctx context.Context, dto dtos.DebitRequest) (*dto
 	}
 	return &dtos.DebitResponse{
 		Balance: acc.Balance,
+		Reason:  dto.Reason,
 	}, nil
 }
 
@@ -76,5 +77,6 @@ func (s *AccountService) Credit(ctx context.Context, dto dtos.CreditRequest) (*d
 	}
 	return &dtos.CreditResponse{
 		Balance: acc.Balance,
+		Reason:  dto.Reason,
 	}, nil
 }

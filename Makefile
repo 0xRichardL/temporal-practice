@@ -37,6 +37,7 @@ build rebuild restart logs tctl:
 
 _build:
 	@echo "Building service(s): $(or $(CMD_ARGS), all)"
+	go work sync
 	docker-compose build $(CMD_ARGS)
 
 _rebuild:
@@ -45,6 +46,7 @@ _rebuild:
 		exit 1; \
 	fi
 	@echo "Rebuilding and recreating service(s): $(CMD_ARGS)"
+	go work sync
 	docker-compose build $(CMD_ARGS)
 	docker-compose up -d --no-deps $(CMD_ARGS)
 

@@ -45,12 +45,14 @@ func (a *AccountActivities) Debit(ctx context.Context, param activities.DebitAct
 	result, err := a.accountService.Debit(ctx, dtos.DebitRequest{
 		AccountID: param.AccountID,
 		Amount:    param.Amount,
+		Reason:    param.Reason,
 	})
 	if err != nil {
 		return nil, err
 	}
 	return &activities.DebitActivityResult{
 		Balance: result.Balance,
+		Reason:  result.Reason,
 	}, nil
 }
 
@@ -58,11 +60,13 @@ func (a *AccountActivities) Credit(ctx context.Context, param activities.CreditA
 	result, err := a.accountService.Credit(ctx, dtos.CreditRequest{
 		AccountID: param.AccountID,
 		Amount:    param.Amount,
+		Reason:    param.Reason,
 	})
 	if err != nil {
 		return nil, err
 	}
 	return &activities.CreditActivityResult{
 		Balance: result.Balance,
+		Reason:  result.Reason,
 	}, nil
 }

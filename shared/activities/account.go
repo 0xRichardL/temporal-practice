@@ -24,10 +24,12 @@ const DebitActivityName = "account::debit"
 type DebitActivityParam struct {
 	AccountID string
 	Amount    int64
+	Reason    string
 }
 
 type DebitActivityResult struct {
 	Balance int64
+	Reason  string
 }
 
 const CreditActivityName = "account::credit"
@@ -35,10 +37,12 @@ const CreditActivityName = "account::credit"
 type CreditActivityParam struct {
 	AccountID string
 	Amount    int64
+	Reason    string
 }
 
 type CreditActivityResult struct {
 	Balance int64
+	Reason  string
 }
 
 type AccountActivities interface {
