@@ -3,18 +3,26 @@
 FROM golang:1.25-alpine AS builder
 
 # Set the working directory
-WORKDIR /app
+WORKDIR /workspace
 
-# Copy module files and download dependencies first to leverage Docker cache
-COPY go.mod go.sum ./
-RUN go mod download
 
-# Copy the rest of the source code
-COPY . .
+# Copy the entire workspace (required for go.work to function)
+COPY go.work go.work
+COPY go.work.sum go.work.sum
+COPY shared/ shared/
+COPY account/ account/
+COPY fraud/ fraud/
+COPY notification/ notification/
+COPY payment/ payment/
+COPY reporting/ reporting/
+
+# Accept build argument for which service to build
+ARG SERVICE
 
 # Build the application, creating a static binary
+WORKDIR /workspace/${SERVICE}
 # CGO_ENABLED=0 is important for creating a static binary that can run in a minimal image like alpine
-RUN CGO_ENABLED=0 go build -o main ./cmd
+RUN CGO_ENABLED=0 go build -o /app/main ./cmd
 
 # --- Final Stage ---
 # Use a minimal, non-root image for the final stage

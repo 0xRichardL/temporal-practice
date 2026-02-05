@@ -27,6 +27,7 @@ func (n *NotificationActivities) Register(w worker.Worker) {
 }
 
 func (n *NotificationActivities) NotifyPayment(ctx context.Context, param activities.NotifyPaymentActivityParam) error {
+	fmt.Printf("NotificationActivities.NotifyPayment: %+v\n", param)
 	return n.notificationService.SendSMS(ctx, dtos.SendSMSRequest{
 		AccountID: param.AccountID,
 		Message:   fmt.Sprintf("Payment for Account: %s of %d", param.AccountID, param.Amount),

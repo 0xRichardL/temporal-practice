@@ -2,6 +2,7 @@ package temporal
 
 import (
 	"context"
+	"fmt"
 
 	"go.temporal.io/sdk/activity"
 	"go.temporal.io/sdk/worker"
@@ -28,6 +29,7 @@ func (a *AccountActivities) Register(w worker.Worker) {
 }
 
 func (a *AccountActivities) ValidateAccount(ctx context.Context, param activities.ValidateAccountActivityParam) (*activities.ValidateAccountActivityResult, error) {
+	fmt.Printf("AccountActivities.ValidateAccount: %+v\n", param)
 	result, err := a.accountService.ValidateAccount(ctx, dtos.ValidateAccountRequest{
 		AccountID: param.AccountID,
 		Amount:    param.Amount,
@@ -42,6 +44,7 @@ func (a *AccountActivities) ValidateAccount(ctx context.Context, param activitie
 }
 
 func (a *AccountActivities) Debit(ctx context.Context, param activities.DebitActivityParam) (*activities.DebitActivityResult, error) {
+	fmt.Printf("AccountActivities.Debit: %+v\n", param)
 	result, err := a.accountService.Debit(ctx, dtos.DebitRequest{
 		AccountID: param.AccountID,
 		Amount:    param.Amount,
@@ -57,6 +60,7 @@ func (a *AccountActivities) Debit(ctx context.Context, param activities.DebitAct
 }
 
 func (a *AccountActivities) Credit(ctx context.Context, param activities.CreditActivityParam) (*activities.CreditActivityResult, error) {
+	fmt.Printf("AccountActivities.Credit: %+v\n", param)
 	result, err := a.accountService.Credit(ctx, dtos.CreditRequest{
 		AccountID: param.AccountID,
 		Amount:    param.Amount,

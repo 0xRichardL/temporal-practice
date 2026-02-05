@@ -88,8 +88,10 @@ services:
     networks:
       - internal
     build:
-      context: ./account
-      dockerfile: ../Dockerfile
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE: account
     restart: always
     depends_on:
       - postgres
@@ -103,8 +105,10 @@ services:
     networks:
       - internal
     build:
-      context: ./fraud
-      dockerfile: ../Dockerfile
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE: fraud
     restart: always
     depends_on:
       - postgres
@@ -118,8 +122,10 @@ services:
     networks:
       - internal
     build:
-      context: ./notification
-      dockerfile: ../Dockerfile
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE: notification
     restart: always
     depends_on:
       - postgres
@@ -132,8 +138,10 @@ services:
     networks:
       - internal
     build:
-      context: ./payment
-      dockerfile: ../Dockerfile
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE: payment
     restart: always
     depends_on:
       - postgres
