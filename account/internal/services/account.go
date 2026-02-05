@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 
 	"github.com/0xRichardL/temporal-practice/account/internal/dtos"
 	"github.com/0xRichardL/temporal-practice/account/internal/models"
@@ -39,25 +40,41 @@ func (s *AccountService) ValidateAccount(ctx context.Context, dto dtos.ValidateA
 
 func (s *AccountService) Debit(ctx context.Context, dto dtos.DebitRequest) (*dtos.DebitResponse, error) {
 	var acc models.Account
-	if err := s.db.WithContext(ctx).Where("id = ?", dto.AccountID).First(&acc).Error; err != nil {
+	if err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		err := tx.Where("id = ?", dto.AccountID).Clauses(clause.Locking{Strength: clause.LockingStrengthUpdate}).First(&acc).Error
+		if err != nil {
+			return err
+		}
+		if acc.Balance < dto.Amount {
+			return fmt.Errorf("insufficient funds")
+		}
+		if err := tx.Model(&acc).Update("balance", acc.Balance-dto.Amount).Error; err != nil {
+			return err
+		}
+		return nil
+	}); err != nil {
 		return nil, err
 	}
-	if acc.Balance < dto.Amount {
-		return nil, gorm.ErrInvalidData
-	}
-	if err := s.db.Model(&acc).Update("balance", acc.Balance-dto.Amount).Error; err != nil {
-		return nil, err
-	}
-	return &dtos.DebitResponse{Balance: acc.Balance - dto.Amount}, nil
+	return &dtos.DebitResponse{
+		Balance: acc.Balance,
+	}, nil
 }
 
 func (s *AccountService) Credit(ctx context.Context, dto dtos.CreditRequest) (*dtos.CreditResponse, error) {
 	var acc models.Account
-	if err := s.db.WithContext(ctx).Where("id = ?", dto.AccountID).First(&acc).Error; err != nil {
+	if err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		err := tx.Where("id = ?", dto.AccountID).Clauses(clause.Locking{Strength: clause.LockingStrengthUpdate}).First(&acc).Error
+		if err != nil {
+			return err
+		}
+		if err := tx.Model(&acc).Update("balance", acc.Balance+dto.Amount).Error; err != nil {
+			return err
+		}
+		return nil
+	}); err != nil {
 		return nil, err
 	}
-	if err := s.db.Model(&acc).Update("balance", acc.Balance+dto.Amount).Error; err != nil {
-		return nil, err
-	}
-	return &dtos.CreditResponse{Balance: acc.Balance + dto.Amount}, nil
+	return &dtos.CreditResponse{
+		Balance: acc.Balance,
+	}, nil
 }
