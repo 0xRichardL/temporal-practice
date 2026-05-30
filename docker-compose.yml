@@ -1,11 +1,9 @@
-version: '3.9'
-
 services:
-  temporal-postgresql:
-    container_name: temporal-postgresql
+  postgres:
+    container_name: postgres
     environment:
-      POSTGRES_PASSWORD: temporal
-      POSTGRES_USER: temporal
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
     image: postgres:16
     networks:
       - internal
@@ -17,14 +15,14 @@ services:
   temporal:
     container_name: temporal
     depends_on:
-      - temporal-postgresql
+      - postgres
     environment:
       - DB=postgres12
       - DB_PORT=5432
-      - POSTGRES_USER=temporal
-      - POSTGRES_PWD=temporal
-      - POSTGRES_SEEDS=temporal-postgresql
-      - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development-sql.yaml
+      - POSTGRES_USER=postgres
+      - POSTGRES_PWD=postgres
+      - POSTGRES_SEEDS=postgres
+      - DYNAMIC_CONFIG_FILE_PATH=/etc/temporal/dynamic-config/development.yaml
       - TEMPORAL_ADDRESS=temporal:7233
       - TEMPORAL_CLI_ADDRESS=temporal:7233
       - PROMETHEUS_ENDPOINT=temporal:7299
@@ -36,7 +34,7 @@ services:
       - 7233:7233
       - 7299:7299
     volumes:
-      - ./dynamicconfig:/etc/temporal/config/dynamicconfig
+      - ./temporal:/etc/temporal/dynamic-config
 
   temporal-admin-tools:
     container_name: temporal-admin-tools
@@ -64,22 +62,39 @@ services:
     ports:
       - 8080:8080
 
-  postgres:
-    container_name: postgres
-    environment:
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_USER: postgres
-      POSTGRES_DB: postgres
-      
-    image: postgres:16
-    networks:
-      - internal
-    ports:
-      - 5434:5432
+  prometheus:
+    container_name: prometheus
+    image: prom/prometheus:latest
     volumes:
-      - /var/lib/postgresql/data
+      - ./prometheus/:/etc/prometheus/
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.enable-lifecycle'
+    ports:
+      - 9090:9090
+    restart: always
+    networks:
+      - default
+
+  grafana:
+    container_name: grafana
+    image: grafana/grafana:latest
+    depends_on:
+      - prometheus
+    ports:
+      - 3000:3000
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning/:/etc/grafana/provisioning/
+      - ./grafana/grafana.ini:/etc/grafana/grafana.ini
+    restart: always
+    networks:
+      - default
 
   account:
+    container_name: account
     environment:
       - DB_URI=postgresql://postgres:postgres@postgres:5432/postgres?sslmode=disable
       - TEMPORAL_HOST=temporal:7233
@@ -98,6 +113,7 @@ services:
       - temporal
 
   fraud:
+    container_name: fraud
     environment:
       - TEMPORAL_HOST=temporal:7233
     ports:
@@ -115,6 +131,7 @@ services:
       - temporal
 
   notification:
+    container_name: notification
     environment:
       - TEMPORAL_HOST=temporal:7233
     ports:
@@ -131,6 +148,7 @@ services:
       - postgres
 
   payment:
+    container_name: payment
     environment:
       - TEMPORAL_HOST=temporal:7233
     ports:
@@ -157,6 +175,10 @@ services:
   #     dockerfile: ../Dockerfile
   #   depends_on:
   #     - postgres
+
+volumes:
+  prometheus_data: {}
+  grafana_data: {}
 
 networks:
   internal:
