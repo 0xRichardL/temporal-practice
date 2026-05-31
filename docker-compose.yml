@@ -1,70 +1,119 @@
 services:
+  # Postgres: PostgreSQL database used by services and Temporal for persistence
   postgres:
+    image: postgres:16
     container_name: postgres
     environment:
       POSTGRES_PASSWORD: postgres
       POSTGRES_USER: postgres
-    image: postgres:16
+    ports:
+      - "5432:5432"
     networks:
       - internal
-    ports:
-      - 5432:5432
     volumes:
       - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 60
+      start_period: 30s
 
-  temporal:
-    container_name: temporal
-    depends_on:
-      - postgres
-    environment:
-      - DB=postgres12
-      - DB_PORT=5432
-      - POSTGRES_USER=postgres
-      - POSTGRES_PWD=postgres
-      - POSTGRES_SEEDS=postgres
-      - DYNAMIC_CONFIG_FILE_PATH=/etc/temporal/dynamic-config/development.yaml
-      - TEMPORAL_ADDRESS=temporal:7233
-      - TEMPORAL_CLI_ADDRESS=temporal:7233
-      - PROMETHEUS_ENDPOINT=temporal:7299
-
-    image: temporalio/auto-setup:1.28.1
-    networks:
-      - internal
-    ports:
-      - 7233:7233
-      - 7299:7299
-    volumes:
-      - ./temporal:/etc/temporal/dynamic-config
-
+  # Temporal Admin Tools: setup and admin CLI (tctl) for Temporal management
   temporal-admin-tools:
+    image: temporalio/admin-tools:1.29.6.1-tctl-1.18.4-cli-1.7.0
     container_name: temporal-admin-tools
-    depends_on:
-      - temporal
+    restart: "on-failure:6"
     environment:
-      - TEMPORAL_ADDRESS=temporal:7233
-      - TEMPORAL_CLI_ADDRESS=temporal:7233
-    image: temporalio/admin-tools:1.28.1-tctl-1.18.4-cli-1.4.1
+      DB: postgres12
+      DB_PORT: 5432
+      POSTGRES_USER: postgres
+      POSTGRES_PWD: postgres
+      POSTGRES_SEEDS: postgres
+      SQL_PASSWORD: postgres
     networks:
       - internal
-    stdin_open: true
-    tty: true
+    volumes:
+      - ./temporal-admin-tools:/scripts
+    entrypoint: ["/bin/sh"]
+    command: /scripts/setup-postgres.sh
+    depends_on:
+      postgres:
+        condition: service_healthy
 
-  temporal-ui:
-    container_name: temporal-ui
-    depends_on:
-      - temporal
+  # Temporal Server: the workflow orchestration server (handles workflows and tasks)
+  temporal:
+    image: temporalio/server:1.29.6
+    container_name: temporal
     environment:
-      - TEMPORAL_ADDRESS=temporal:7233
-      - TEMPORAL_CORS_ORIGINS=http://localhost:3000
-    image: temporalio/ui:2.34.0
-    networks:
-      - internal
+      DB: "postgres12"
+      DB_PORT: "5432"
+      POSTGRES_USER: "postgres"
+      POSTGRES_PWD: "postgres"
+      POSTGRES_SEEDS: "postgres"
+      BIND_ON_IP: 0.0.0.0
+      DYNAMIC_CONFIG_FILE_PATH: /etc/temporal/dynamicconfig/sql.yaml
+      PROMETHEUS_ENDPOINT: temporal:7299
     ports:
-      - 8080:8080
+      - "7233:7233"
+      - "7299:7299"
+    networks:
+      - internal
+    volumes:
+      - ./temporal/dynamicconfig:/etc/temporal/dynamicconfig
+    depends_on:
+      temporal-admin-tools:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "7233"]
+      interval: 5s
+      timeout: 3s
+      start_period: 30s
+      retries: 60
 
+  # Temporal Create Namespace: one-shot task to create the default Temporal namespace
+  temporal-create-namespace:
+    image: temporalio/admin-tools:1.29.6.1-tctl-1.18.4-cli-1.7.0
+    container_name: temporal-create-namespace
+    restart: "on-failure:5"
+    environment:
+      TEMPORAL_ADDRESS: temporal:7233
+      DEFAULT_NAMESPACE: default
+    networks:
+      - internal
+    volumes:
+      - ./temporal-create-namespace:/scripts
+    entrypoint: ["/bin/sh"]
+    command: /scripts/create-namespace.sh
+    depends_on:
+      temporal:
+        condition: service_healthy
+
+  # Temporal UI: web-based UI for managing and inspecting Temporal workflows
+  temporal-ui:
+    image: temporalio/ui:2.50.0
+    container_name: temporal-ui
+    environment:
+      TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_CORS_ORIGINS: http://localhost:3000
+    ports:
+      - "8080:8080"
+    networks:
+      - internal
+    depends_on:
+      temporal:
+        condition: service_healthy
+
+  # Prometheus: metrics scraper and time-series database for monitoring
   prometheus:
-    container_name: prometheus
     image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - internal
     volumes:
       - ./prometheus/:/etc/prometheus/
       - prometheus_data:/prometheus
@@ -72,109 +121,99 @@ services:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
       - '--web.enable-lifecycle'
-    ports:
-      - 9090:9090
-    restart: always
-    networks:
-      - default
 
+  # Grafana: dashboards and visualizations for Prometheus metrics
   grafana:
-    container_name: grafana
     image: grafana/grafana:latest
+    container_name: grafana
     depends_on:
       - prometheus
     ports:
-      - 3000:3000
+      - "3000:3000"
+    networks:
+      - internal
     volumes:
       - grafana_data:/var/lib/grafana
       - ./grafana/provisioning/:/etc/grafana/provisioning/
       - ./grafana/grafana.ini:/etc/grafana/grafana.ini
-    restart: always
-    networks:
-      - default
+      - ./grafana/dashboards/:/var/lib/grafana/dashboards/
 
+  # Account service: handles account creation, updates, and related workflows
   account:
-    container_name: account
-    environment:
-      - DB_URI=postgresql://postgres:postgres@postgres:5432/postgres?sslmode=disable
-      - TEMPORAL_HOST=temporal:7233
-    ports:
-      - 8001:8080
-    networks:
-      - internal
     build:
       context: .
       dockerfile: Dockerfile
       args:
         SERVICE: account
-    restart: always
-    depends_on:
-      - postgres
-      - temporal
-
-  fraud:
-    container_name: fraud
+    container_name: account
+    restart: "on-failure:6"
     environment:
-      - TEMPORAL_HOST=temporal:7233
+      DB_URI: postgresql://postgres:postgres@postgres:5432/postgres?sslmode=disable
+      TEMPORAL_HOST: temporal:7233
     ports:
-      - 8002:8080
+      - "8001:8080"
     networks:
       - internal
+    depends_on:
+      temporal:
+        condition: service_healthy
+
+  # Fraud service: performs fraud detection checks and workflow orchestration
+  fraud:
     build:
       context: .
       dockerfile: Dockerfile
       args:
         SERVICE: fraud
-    restart: always
-    depends_on:
-      - postgres
-      - temporal
-
-  notification:
-    container_name: notification
+    container_name: fraud
+    restart: "on-failure:6"
     environment:
-      - TEMPORAL_HOST=temporal:7233
+      TEMPORAL_HOST: temporal:7233
     ports:
-      - 8003:8080
+      - "8002:8080"
     networks:
       - internal
+    depends_on:
+      temporal:
+        condition: service_healthy
+
+  # Notification service: sends SMS/email notifications and triggers workflows
+  notification:
     build:
       context: .
       dockerfile: Dockerfile
       args:
         SERVICE: notification
-    restart: always
-    depends_on:
-      - postgres
-
-  payment:
-    container_name: payment
+    container_name: notification
+    restart: "on-failure:6"
     environment:
-      - TEMPORAL_HOST=temporal:7233
+      TEMPORAL_HOST: temporal:7233
     ports:
-      - 8004:8080
+      - "8003:8080"
     networks:
       - internal
+    depends_on:
+      temporal:
+        condition: service_healthy
+
+  # Payment service: processes payments and coordinates payment workflows
+  payment:
     build:
       context: .
       dockerfile: Dockerfile
       args:
         SERVICE: payment
-    restart: always
+    container_name: payment
+    restart: "on-failure:6"
+    environment:
+      TEMPORAL_HOST: temporal:7233
+    ports:
+      - "8004:8080"
+    networks:
+      - internal
     depends_on:
-      - postgres
-      - temporal
-
-  # reporting:
-  #   ports:
-  #     - 8005:8080
-  #   networks:
-  #     - internal
-  #   build:
-  #     context: ./reporting
-  #     dockerfile: ../Dockerfile
-  #   depends_on:
-  #     - postgres
+      temporal:
+        condition: service_healthy
 
 volumes:
   prometheus_data: {}

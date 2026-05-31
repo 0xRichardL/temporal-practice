@@ -23,7 +23,7 @@ help:
 	@echo "  tctl [a]  - Run tctl commands 'a'. e.g., 'make tctl workflow list'"
 
 up:
-	docker-compose up -d
+	docker-compose up
 
 down:
 	docker-compose down
