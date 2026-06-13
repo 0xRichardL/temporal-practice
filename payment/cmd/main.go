@@ -45,6 +45,8 @@ func main() {
 	paymentController.RegisterRoutes(r)
 	/// Swagger:
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	// Redirect /swagger to the Swagger UI
+	r.GET("/swagger", func(ctx *gin.Context) { ctx.Redirect(302, "/swagger/index.html") })
 
 	log.Println("Starting server on port 8080")
 	if err := r.Run(":8080"); err != nil {

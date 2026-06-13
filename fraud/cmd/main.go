@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"net/http"
 	"os"
 
 	"github.com/gin-gonic/gin"
@@ -34,6 +35,9 @@ func main() {
 	fraudController := rest.NewFraudController(fraudService)
 	fraudController.RegisterRoutes(r)
 	/// Swagger:
+	r.GET("/swagger", func(c *gin.Context) {
+		c.Redirect(http.StatusMovedPermanently, "/swagger/index.html")
+	})
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	// Start worker at another routine.
 	go func() {
