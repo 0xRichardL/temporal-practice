@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "skills": {
+    "code-review-and-quality": {
+      "source": "addyosmani/agent-skills",
+      "ref": "main",
+      "sourceType": "github",
+      "skillPath": "skills/code-review-and-quality/SKILL.md",
+      "computedHash": "42159ab631c8622dd877246240e573f1550fa65a87b5664f85bc13d6fef12892"
+    },
+    "code-simplification": {
+      "source": "addyosmani/agent-skills",
+      "ref": "main",
+      "sourceType": "github",
+      "skillPath": "skills/code-simplification/SKILL.md",
+      "computedHash": "7973e746e8e2ea5004d520da970c15a106824b8d6be1bcff48908aec021f3677"
+    },
+    "context-engineering": {
+      "source": "addyosmani/agent-skills",
+      "ref": "main",
+      "sourceType": "github",
+      "skillPath": "skills/context-engineering/SKILL.md",
+      "computedHash": "bb8864454c5a24636cab86c4b3c4b29e7e7431c80485bfd7c9c0a19a01936510"
+    },
+    "test-driven-development": {
+      "source": "addyosmani/agent-skills",
+      "ref": "main",
+      "sourceType": "github",
+      "skillPath": "skills/test-driven-development/SKILL.md",
+      "computedHash": "2a541c517efcf3ebc1c0fb8cb644bab1690724fb9d2f67bb6d075d6a73876ba8"
+    }
+  }
+}
