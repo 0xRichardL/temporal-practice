@@ -7,6 +7,9 @@ scrape_configs:
     static_configs:
       # Temporal Service metrics
       - targets:
-          - "temporal:7299"
+          - "temporal-frontend:7299"
+          - "temporal-history:7299"
+          - "temporal-matching:7299"
+          - "temporal-worker:7299"
         labels:
           group: "server-metrics"

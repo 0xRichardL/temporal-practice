@@ -1,3 +1,24 @@
+x-temporal-server-common: &temporal-server-common
+  image: temporalio/server:1.29.6
+  environment:
+    DB: "postgres12"
+    DB_PORT: "5432"
+    POSTGRES_USER: "postgres"
+    POSTGRES_PWD: "postgres"
+    POSTGRES_SEEDS: "postgres"
+    BIND_ON_IP: 0.0.0.0
+    DYNAMIC_CONFIG_FILE_PATH: /etc/temporal/dynamicconfig/sql.yaml
+    PROMETHEUS_ENDPOINT: 0.0.0.0:7299
+  networks:
+    - internal
+  volumes:
+    - ./temporal/dynamicconfig:/etc/temporal/dynamicconfig
+  depends_on:
+    temporal-admin-tools:
+      condition: service_completed_successfully
+    postgres:
+      condition: service_healthy
+
 services:
   # Postgres: PostgreSQL database used by services and Temporal for persistence
   postgres:
@@ -41,27 +62,21 @@ services:
       postgres:
         condition: service_healthy
 
-  # Temporal Server: the workflow orchestration server (handles workflows and tasks)
-  temporal:
-    image: temporalio/server:1.29.6
-    container_name: temporal
-    environment:
-      DB: "postgres12"
-      DB_PORT: "5432"
-      POSTGRES_USER: "postgres"
-      POSTGRES_PWD: "postgres"
-      POSTGRES_SEEDS: "postgres"
-      BIND_ON_IP: 0.0.0.0
-      DYNAMIC_CONFIG_FILE_PATH: /etc/temporal/dynamicconfig/sql.yaml
-      PROMETHEUS_ENDPOINT: temporal:7299
+  # Temporal Frontend: public gRPC/API endpoint for clients, UI, and admin tools
+  temporal-frontend:
+    <<: *temporal-server-common
+    container_name: temporal-frontend
+    command: ["start", "--service", "frontend"]
     ports:
       - "7233:7233"
       - "7299:7299"
-    networks:
-      - internal
-    volumes:
-      - ./temporal/dynamicconfig:/etc/temporal/dynamicconfig
     depends_on:
+      temporal-history:
+        condition: service_started
+      temporal-matching:
+        condition: service_started
+      temporal-worker:
+        condition: service_started
       temporal-admin-tools:
         condition: service_completed_successfully
       postgres:
@@ -73,13 +88,31 @@ services:
       start_period: 30s
       retries: 60
 
+  # Temporal History: workflow state machine and persistence coordination
+  temporal-history:
+    <<: *temporal-server-common
+    container_name: temporal-history
+    command: ["start", "--service", "history"]
+
+  # Temporal Matching: task queue matching and dispatch
+  temporal-matching:
+    <<: *temporal-server-common
+    container_name: temporal-matching
+    command: ["start", "--service", "matching"]
+
+  # Temporal Worker: internal system workflow worker
+  temporal-worker:
+    <<: *temporal-server-common
+    container_name: temporal-worker
+    command: ["start", "--service", "worker"]
+
   # Temporal Create Namespace: one-shot task to create the default Temporal namespace
   temporal-create-namespace:
     image: temporalio/admin-tools:1.29.6.1-tctl-1.18.4-cli-1.7.0
     container_name: temporal-create-namespace
     restart: "on-failure:5"
     environment:
-      TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_ADDRESS: temporal-frontend:7233
       DEFAULT_NAMESPACE: default
     networks:
       - internal
@@ -88,7 +121,7 @@ services:
     entrypoint: ["/bin/sh"]
     command: /scripts/create-namespace.sh
     depends_on:
-      temporal:
+      temporal-frontend:
         condition: service_healthy
 
   # Temporal UI: web-based UI for managing and inspecting Temporal workflows
@@ -96,14 +129,14 @@ services:
     image: temporalio/ui:2.50.0
     container_name: temporal-ui
     environment:
-      TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_ADDRESS: temporal-frontend:7233
       TEMPORAL_CORS_ORIGINS: http://localhost:3000
     ports:
       - "8080:8080"
     networks:
       - internal
     depends_on:
-      temporal:
+      temporal-frontend:
         condition: service_healthy
 
   # Prometheus: metrics scraper and time-series database for monitoring
@@ -149,13 +182,13 @@ services:
     restart: "on-failure:6"
     environment:
       DB_URI: postgresql://postgres:postgres@postgres:5432/postgres?sslmode=disable
-      TEMPORAL_HOST: temporal:7233
+      TEMPORAL_HOST: temporal-frontend:7233
     ports:
       - "8001:8080"
     networks:
       - internal
     depends_on:
-      temporal:
+      temporal-frontend:
         condition: service_healthy
 
   # Fraud service: performs fraud detection checks and workflow orchestration
@@ -168,13 +201,13 @@ services:
     container_name: fraud
     restart: "on-failure:6"
     environment:
-      TEMPORAL_HOST: temporal:7233
+      TEMPORAL_HOST: temporal-frontend:7233
     ports:
       - "8002:8080"
     networks:
       - internal
     depends_on:
-      temporal:
+      temporal-frontend:
         condition: service_healthy
 
   # Notification service: sends SMS/email notifications and triggers workflows
@@ -187,13 +220,13 @@ services:
     container_name: notification
     restart: "on-failure:6"
     environment:
-      TEMPORAL_HOST: temporal:7233
+      TEMPORAL_HOST: temporal-frontend:7233
     ports:
       - "8003:8080"
     networks:
       - internal
     depends_on:
-      temporal:
+      temporal-frontend:
         condition: service_healthy
 
   # Payment service: processes payments and coordinates payment workflows
@@ -206,13 +239,13 @@ services:
     container_name: payment
     restart: "on-failure:6"
     environment:
-      TEMPORAL_HOST: temporal:7233
+      TEMPORAL_HOST: temporal-frontend:7233
     ports:
       - "8004:8080"
     networks:
       - internal
     depends_on:
-      temporal:
+      temporal-frontend:
         condition: service_healthy
 
 volumes:

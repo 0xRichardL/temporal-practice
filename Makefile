@@ -2,8 +2,10 @@
 # Makefile for managing docker-compose services
 
 # Use .PHONY to ensure these targets run even if files with the same name exist. It also improves performance.
-.PHONY: help up down clean build rebuild logs ps restart tctl mod-tidy mod-update-shared \
+.PHONY: help up down clean build rebuild logs ps restart tctl test mod-sync mod-tidy mod-update-shared \
         _build _rebuild _logs _restart _tctl
+
+GO_MODULE_DIRS := $(shell find . -name go.mod -exec dirname {} \; | sort)
 
 # Default target when no command is specified.
 default: help
@@ -21,6 +23,8 @@ help:
 	@echo "  ps        - List containers."
 	@echo "  restart [s]- Restart services. 's' are optional service name(s). e.g., 'make restart account payment'"
 	@echo "  tctl [a]  - Run tctl commands 'a'. e.g., 'make tctl workflow list'"
+	@echo "  test      - Run tests in all Go workspace modules."
+	@echo "  mod-sync  - Sync workspace dependency versions into module files."
 
 up:
 	docker-compose up
@@ -37,7 +41,6 @@ build rebuild restart logs tctl:
 
 _build:
 	@echo "Building service(s): $(or $(CMD_ARGS), all)"
-	go work sync
 	docker-compose build $(CMD_ARGS)
 
 _rebuild:
@@ -46,7 +49,6 @@ _rebuild:
 		exit 1; \
 	fi
 	@echo "Rebuilding and recreating service(s): $(CMD_ARGS)"
-	go work sync
 	docker-compose build $(CMD_ARGS)
 	docker-compose up -d --no-deps $(CMD_ARGS)
 
@@ -67,10 +69,26 @@ _tctl:
 	fi
 	docker-compose exec temporal-admin-tools tctl $(CMD_ARGS)
 
+test:
+	@echo "Running tests in all Go modules..."
+	@set -e; \
+	for dir in $(GO_MODULE_DIRS); do \
+		go_files=$$(find "$$dir" -name '*.go' -not -path '*/vendor/*' -print -quit); \
+		if [ -z "$$go_files" ]; then \
+			echo "==> Skipping $$dir (no packages)"; \
+		else \
+			echo "==> Testing $$dir"; \
+			(cd "$$dir" && go test ./...); \
+		fi; \
+	done
+
+mod-sync:
+	@echo "Syncing workspace dependency versions into module files..."
+	go work sync
+
 mod-tidy:
 	@echo "Running go mod tidy in all Go modules..."
-	@find . -name go.mod -print | while read -r file; do \
-		dir=$$(dirname "$$file"); \
+	@for dir in $(GO_MODULE_DIRS); do \
 		echo "==> Tidying in $$dir"; \
 		(cd "$$dir" && go mod tidy); \
 	done

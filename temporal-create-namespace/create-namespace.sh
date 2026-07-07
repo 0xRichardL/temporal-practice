@@ -2,7 +2,7 @@
 set -eu
 
 NAMESPACE=${DEFAULT_NAMESPACE:-default}
-TEMPORAL_ADDRESS=${TEMPORAL_ADDRESS:-temporal:7233}
+TEMPORAL_ADDRESS=${TEMPORAL_ADDRESS:-temporal-frontend:7233}
 MAX_ATTEMPTS=${TEMPORAL_HEALTH_CHECK_MAX_ATTEMPTS:-30}
 SLEEP_SECONDS=${TEMPORAL_HEALTH_CHECK_SLEEP_SECONDS:-5}
 
@@ -54,7 +54,7 @@ while :; do
     break
   fi
 
-  if [ "$attempt" -ge "$MAX_ATTdMPTS" ]; then
+  if [ "$attempt" -ge "$MAX_ATTEMPTS" ]; then
     echo "Failed to create namespace '$NAMESPACE' after $MAX_ATTEMPTS attempts"
     exit 1
   fi
