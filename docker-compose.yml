@@ -1,23 +1,11 @@
 x-temporal-server-common: &temporal-server-common
   image: temporalio/server:1.29.6
-  environment:
-    DB: "postgres12"
-    DB_PORT: "5432"
-    POSTGRES_USER: "postgres"
-    POSTGRES_PWD: "postgres"
-    POSTGRES_SEEDS: "postgres"
-    BIND_ON_IP: 0.0.0.0
-    DYNAMIC_CONFIG_FILE_PATH: /etc/temporal/dynamicconfig/sql.yaml
-    PROMETHEUS_ENDPOINT: 0.0.0.0:7299
+  env_file:
+    - ./temporal-server.docker.env
   networks:
     - internal
   volumes:
     - ./temporal/dynamicconfig:/etc/temporal/dynamicconfig
-  depends_on:
-    temporal-admin-tools:
-      condition: service_completed_successfully
-    postgres:
-      condition: service_healthy
 
 services:
   # Postgres: PostgreSQL database used by services and Temporal for persistence
@@ -62,11 +50,35 @@ services:
       postgres:
         condition: service_healthy
 
+  # Temporal Matching: task queue matching and dispatch
+  temporal-matching:
+    <<: *temporal-server-common
+    container_name: temporal-matching
+    restart: "on-failure:6"
+    environment:
+      TEMPORAL_SERVICES: matching
+    depends_on:
+      temporal-admin-tools:
+        condition: service_completed_successfully
+
+  # Temporal History: workflow state machine and persistence coordination
+  temporal-history:
+    <<: *temporal-server-common
+    container_name: temporal-history
+    restart: "on-failure:6"
+    environment:
+      TEMPORAL_SERVICES: history
+    depends_on:
+      temporal-matching:
+        condition: service_started
+
   # Temporal Frontend: public gRPC/API endpoint for clients, UI, and admin tools
   temporal-frontend:
     <<: *temporal-server-common
     container_name: temporal-frontend
-    command: ["start", "--service", "frontend"]
+    restart: "on-failure:6"
+    environment:
+      TEMPORAL_SERVICES: frontend
     ports:
       - "7233:7233"
       - "7299:7299"
@@ -75,12 +87,6 @@ services:
         condition: service_started
       temporal-matching:
         condition: service_started
-      temporal-worker:
-        condition: service_started
-      temporal-admin-tools:
-        condition: service_completed_successfully
-      postgres:
-        condition: service_healthy
     healthcheck:
       test: ["CMD", "nc", "-z", "localhost", "7233"]
       interval: 5s
@@ -88,23 +94,16 @@ services:
       start_period: 30s
       retries: 60
 
-  # Temporal History: workflow state machine and persistence coordination
-  temporal-history:
-    <<: *temporal-server-common
-    container_name: temporal-history
-    command: ["start", "--service", "history"]
-
-  # Temporal Matching: task queue matching and dispatch
-  temporal-matching:
-    <<: *temporal-server-common
-    container_name: temporal-matching
-    command: ["start", "--service", "matching"]
-
   # Temporal Worker: internal system workflow worker
   temporal-worker:
     <<: *temporal-server-common
     container_name: temporal-worker
-    command: ["start", "--service", "worker"]
+    restart: "on-failure:6"
+    environment:
+      TEMPORAL_SERVICES: worker
+    depends_on:
+      temporal-frontend:
+        condition: service_healthy
 
   # Temporal Create Namespace: one-shot task to create the default Temporal namespace
   temporal-create-namespace:
@@ -151,9 +150,9 @@ services:
       - ./prometheus/:/etc/prometheus/
       - prometheus_data:/prometheus
     command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.path=/prometheus'
-      - '--web.enable-lifecycle'
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.enable-lifecycle"
 
   # Grafana: dashboards and visualizations for Prometheus metrics
   grafana:
