@@ -20,7 +20,11 @@ services:
     networks:
       - internal
     volumes:
-      - /var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
+      - ./postgres/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+    command: ["postgres", "-c", "config_file=/etc/postgresql/postgresql.conf"]
+    cpus: 4
+    mem_limit: 4g
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
@@ -32,7 +36,7 @@ services:
   temporal-admin-tools:
     image: temporalio/admin-tools:1.29.6.1-tctl-1.18.4-cli-1.7.0
     container_name: temporal-admin-tools
-    restart: "on-failure:6"
+    restart: "on-failure:1"
     environment:
       DB: postgres12
       DB_PORT: 5432
@@ -54,7 +58,7 @@ services:
   temporal-matching:
     <<: *temporal-server-common
     container_name: temporal-matching
-    restart: "on-failure:6"
+    restart: "on-failure:1"
     environment:
       TEMPORAL_SERVICES: matching
     depends_on:
@@ -65,7 +69,7 @@ services:
   temporal-history:
     <<: *temporal-server-common
     container_name: temporal-history
-    restart: "on-failure:6"
+    restart: "on-failure:1"
     environment:
       TEMPORAL_SERVICES: history
     depends_on:
@@ -76,7 +80,7 @@ services:
   temporal-frontend:
     <<: *temporal-server-common
     container_name: temporal-frontend
-    restart: "on-failure:6"
+    restart: "on-failure:1"
     environment:
       TEMPORAL_SERVICES: frontend
     ports:
@@ -98,7 +102,7 @@ services:
   temporal-worker:
     <<: *temporal-server-common
     container_name: temporal-worker
-    restart: "on-failure:6"
+    restart: "on-failure:1"
     environment:
       TEMPORAL_SERVICES: worker
     depends_on:
@@ -109,7 +113,7 @@ services:
   temporal-create-namespace:
     image: temporalio/admin-tools:1.29.6.1-tctl-1.18.4-cli-1.7.0
     container_name: temporal-create-namespace
-    restart: "on-failure:5"
+    restart: "on-failure:1"
     environment:
       TEMPORAL_ADDRESS: temporal-frontend:7233
       DEFAULT_NAMESPACE: default
@@ -178,7 +182,7 @@ services:
       args:
         SERVICE: account
     container_name: account
-    restart: "on-failure:6"
+    restart: "on-failure:1"
     environment:
       DB_URI: postgresql://postgres:postgres@postgres:5432/postgres?sslmode=disable
       TEMPORAL_HOST: temporal-frontend:7233
@@ -198,7 +202,7 @@ services:
       args:
         SERVICE: fraud
     container_name: fraud
-    restart: "on-failure:6"
+    restart: "on-failure:1"
     environment:
       TEMPORAL_HOST: temporal-frontend:7233
     ports:
@@ -217,7 +221,7 @@ services:
       args:
         SERVICE: notification
     container_name: notification
-    restart: "on-failure:6"
+    restart: "on-failure:1"
     environment:
       TEMPORAL_HOST: temporal-frontend:7233
     ports:
@@ -236,7 +240,7 @@ services:
       args:
         SERVICE: payment
     container_name: payment
-    restart: "on-failure:6"
+    restart: "on-failure:1"
     environment:
       TEMPORAL_HOST: temporal-frontend:7233
     ports:
@@ -248,6 +252,7 @@ services:
         condition: service_healthy
 
 volumes:
+  postgres_data: {}
   prometheus_data: {}
   grafana_data: {}
 
