@@ -1,0 +1,412 @@
+{
+  "info": {
+    "_postman_id": "2b50790b-a952-4a92-a477-d240297709c6",
+    "name": "Temporal Practice - Local Test Services",
+    "description": "Postman collection for the HTTP APIs exposed by the temporal-practice local test stack.\n\nRun the requests in order for a complete payment flow:\n1. Create Payment\n2. Get Payment Status (Before Fraud Check)\n3. Submit Fraud Check\n4. Get Payment Status (After Fraud Check)\n\nCreate Payment automatically stores order_id, workflow_id, and run_id as collection variables. Account and notification are Temporal workers and do not expose HTTP APIs.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Payment Flow",
+      "description": "End-to-end happy-path payment flow. Run these requests in order.",
+      "item": [
+        {
+          "name": "1. Create Payment",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON\", function () {",
+                  "  pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "const response = pm.response.json();",
+                  "",
+                  "pm.test(\"Response contains payment identifiers\", function () {",
+                  "  pm.expect(response.order_id).to.be.a(\"string\").and.not.empty;",
+                  "  pm.expect(response.workflow_id).to.be.a(\"string\").and.not.empty;",
+                  "  pm.expect(response.run_id).to.be.a(\"string\").and.not.empty;",
+                  "});",
+                  "",
+                  "if (response.order_id) {",
+                  "  pm.collectionVariables.set(\"order_id\", response.order_id);",
+                  "}",
+                  "if (response.workflow_id) {",
+                  "  pm.collectionVariables.set(\"workflow_id\", response.workflow_id);",
+                  "}",
+                  "if (response.run_id) {",
+                  "  pm.collectionVariables.set(\"run_id\", response.run_id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"account_id\": \"{{account_id}}\",\n  \"amount\": {{amount}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{payment_base_url}}/payment",
+              "host": [
+                "{{payment_base_url}}"
+              ],
+              "path": [
+                "payment"
+              ]
+            },
+            "description": "Starts a Temporal payment workflow. The test script saves the returned identifiers for subsequent requests."
+          },
+          "response": []
+        },
+        {
+          "name": "2. Get Payment Status (Before Fraud Check)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get(\"workflow_id\")) {",
+                  "  throw new Error(\"workflow_id is empty. Run '1. Create Payment' first.\");",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON\", function () {",
+                  "  pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test(\"Response contains a status\", function () {",
+                  "  const response = pm.response.json();",
+                  "  pm.expect(response.status).to.be.a(\"string\").and.not.empty;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{payment_base_url}}/payment/{{workflow_id}}/status",
+              "host": [
+                "{{payment_base_url}}"
+              ],
+              "path": [
+                "payment",
+                "{{workflow_id}}",
+                "status"
+              ]
+            },
+            "description": "Queries the payment workflow's current step before the fraud decision is submitted."
+          },
+          "response": []
+        },
+        {
+          "name": "3. Submit Fraud Check",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get(\"order_id\")) {",
+                  "  throw new Error(\"order_id is empty. Run '1. Create Payment' first.\");",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON\", function () {",
+                  "  pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test(\"Fraud signal was sent\", function () {",
+                  "  const response = pm.response.json();",
+                  "  pm.expect(response.message).to.eql(\"Fraud check signal sent\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"order_id\": \"{{order_id}}\",\n  \"is_valid\": {{fraud_is_valid}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{fraud_base_url}}/fraud-check",
+              "host": [
+                "{{fraud_base_url}}"
+              ],
+              "path": [
+                "fraud-check"
+              ]
+            },
+            "description": "Signals the fraud child workflow. Set fraud_is_valid to false to test payment compensation."
+          },
+          "response": []
+        },
+        {
+          "name": "4. Get Payment Status (After Fraud Check)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get(\"workflow_id\")) {",
+                  "  throw new Error(\"workflow_id is empty. Run '1. Create Payment' first.\");",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON\", function () {",
+                  "  pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test(\"Response contains a status\", function () {",
+                  "  const response = pm.response.json();",
+                  "  pm.expect(response.status).to.be.a(\"string\").and.not.empty;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{payment_base_url}}/payment/{{workflow_id}}/status",
+              "host": [
+                "{{payment_base_url}}"
+              ],
+              "path": [
+                "payment",
+                "{{workflow_id}}",
+                "status"
+              ]
+            },
+            "description": "Queries the payment workflow's current step after the fraud signal. The workflow may need a brief moment to finish."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Service Documentation",
+      "description": "Swagger/OpenAPI documents served by the HTTP services.",
+      "item": [
+        {
+          "name": "Payment Swagger JSON",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Swagger document contains payment paths\", function () {",
+                  "  const response = pm.response.json();",
+                  "  pm.expect(response.paths).to.have.property(\"/payment\");",
+                  "  pm.expect(response.paths).to.have.property(\"/payment/{workflowID}/status\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{payment_base_url}}/swagger/doc.json",
+              "host": [
+                "{{payment_base_url}}"
+              ],
+              "path": [
+                "swagger",
+                "doc.json"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Fraud Swagger JSON",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Swagger document contains fraud-check path\", function () {",
+                  "  const response = pm.response.json();",
+                  "  pm.expect(response.paths).to.have.property(\"/fraud-check\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{fraud_base_url}}/swagger/doc.json",
+              "host": [
+                "{{fraud_base_url}}"
+              ],
+              "path": [
+                "swagger",
+                "doc.json"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "auth": {
+    "type": "noauth"
+  },
+  "variable": [
+    {
+      "key": "payment_base_url",
+      "value": "http://localhost:8004",
+      "type": "string"
+    },
+    {
+      "key": "fraud_base_url",
+      "value": "http://localhost:8002",
+      "type": "string"
+    },
+    {
+      "key": "account_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "amount",
+      "value": "100",
+      "type": "string"
+    },
+    {
+      "key": "fraud_is_valid",
+      "value": "true",
+      "type": "string"
+    },
+    {
+      "key": "order_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "workflow_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "run_id",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}

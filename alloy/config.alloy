@@ -1,0 +1,62 @@
+logging {
+	level  = "info"
+	format = "logfmt"
+}
+
+prometheus.exporter.postgres "postgres" {
+	data_source_names = [
+		"postgresql://alloy_monitor:" + encoding.url_encode(sys.env("POSTGRES_MONITOR_PASSWORD")) + "@postgres:5432/postgres?sslmode=disable",
+	]
+
+	enabled_collectors = [
+		"database",
+		"locks",
+		"long_running_transactions",
+		"postmaster",
+		"replication",
+		"stat_bgwriter",
+		"stat_database",
+		"stat_statements",
+		"stat_user_tables",
+		"statio_user_indexes",
+	]
+
+	autodiscovery {
+		enabled            = true
+		database_allowlist = ["postgres", "temporal", "temporal_visibility"]
+	}
+
+	stat_statements {
+		include_query = false
+		limit         = 100
+		exclude_users = ["alloy_monitor"]
+	}
+}
+
+discovery.relabel "postgres" {
+	targets = prometheus.exporter.postgres.postgres.targets
+
+	rule {
+		target_label = "instance"
+		replacement  = "postgres:5432"
+	}
+
+	rule {
+		target_label = "job"
+		replacement  = "integrations/postgres_exporter"
+	}
+}
+
+prometheus.scrape "postgres" {
+	targets         = discovery.relabel.postgres.output
+	forward_to      = [prometheus.remote_write.prometheus.receiver]
+	job_name        = "integrations/postgres_exporter"
+	scrape_interval = "10s"
+}
+
+prometheus.remote_write "prometheus" {
+	endpoint {
+		name = "local-prometheus"
+		url  = "http://prometheus:9090/api/v1/write"
+	}
+}

@@ -1,0 +1,46 @@
+# OS and editor files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# Local environment overrides and secrets
+.env
+.env.*
+*.local
+*.secret
+*.pem
+*.key
+!temporal-server.docker.env
+
+# Go build and test artifacts
+bin/
+build/
+dist/
+tmp/
+*.test
+*.prof
+*.pprof
+coverage.out
+coverage.html
+*.coverprofile
+
+# Logs and runtime files
+*.log
+logs/
+*.pid
+*.sock
+
+# Docker Compose/local runtime artifacts
+.docker/
+docker-compose.override.yml
+
+# Tool caches
+.cache/
+.tmp/
+.air.toml

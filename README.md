@@ -7,7 +7,7 @@ Fintech-style Temporal practice project for learning workflow orchestration with
 - Temporal workflows, activities, task queues, retries, timers, signals, queries, and child workflows.
 - Saga compensation for refunding a debit when later workflow steps fail.
 - Separate Go services for payment orchestration, account activities, fraud signaling, and notifications.
-- Local Temporal Server, Temporal UI, PostgreSQL, Prometheus, and Grafana through Docker Compose.
+- Local Temporal Server, Temporal UI, PostgreSQL, Grafana Alloy, Prometheus, and Grafana through Docker Compose.
 - Go workspace layout with shared workflow and activity contracts.
 
 ## Architecture
@@ -32,6 +32,7 @@ flowchart LR
     end
 
     postgres[(PostgreSQL<br/>:5432)]
+    alloy[Grafana Alloy<br/>:12345]
     prometheus[Prometheus<br/>:9090]
     grafana[Grafana<br/>:3000]
 
@@ -50,6 +51,8 @@ flowchart LR
     frontend --> postgres
     account --> postgres
 
+    alloy -->|collect PostgreSQL metrics| postgres
+    alloy -->|remote write| prometheus
     prometheus -->|scrape Temporal metrics| frontend
     grafana --> prometheus
     ui --> frontend
@@ -127,6 +130,7 @@ flowchart TD
 | `temporal-admin-tools/` | Temporal SQL schema setup script used by Docker Compose. |
 | `temporal-create-namespace/` | One-shot namespace creation script. |
 | `prometheus/` | Prometheus scrape configuration. |
+| `alloy/` | Grafana Alloy configuration for collecting PostgreSQL metrics. |
 | `grafana/` | Grafana provisioning, dashboard, and datasource configuration. |
 | `docker-compose.yml` | Local infrastructure and service orchestration. |
 | `Dockerfile` | Shared multi-stage build for each Go service selected by `SERVICE`. |
@@ -192,6 +196,7 @@ Useful local URLs:
 | --- | --- |
 | Temporal Frontend | `localhost:7233` |
 | Temporal UI | `http://localhost:8080` |
+| Grafana Alloy | `http://localhost:12345` |
 | Prometheus | `http://localhost:9090` |
 | Grafana | `http://localhost:3000` |
 | Account service | `http://localhost:8001` |
@@ -213,6 +218,30 @@ make clean
 make tctl workflow list
 make mod-tidy
 ```
+
+### PostgreSQL Monitoring
+
+PostgreSQL monitoring follows this local pipeline:
+
+```text
+PostgreSQL -> Grafana Alloy -> Prometheus -> Grafana
+```
+
+Alloy embeds `postgres_exporter`, collects PostgreSQL metrics every 10 seconds, and remote-writes them to Prometheus with these stable labels:
+
+- `job="integrations/postgres_exporter"`
+- `instance="postgres:5432"`
+
+The one-shot `postgres-monitoring-init` service creates the non-superuser `alloy_monitor` role, grants it `pg_monitor`, and enables `pg_stat_statements` in the `postgres`, `temporal`, and `temporal_visibility` databases. The role name is fixed so the setup cannot alter an arbitrary existing role. Local development defaults its password to `alloy_monitor`; override the password without committing credentials:
+
+```bash
+POSTGRES_MONITOR_PASSWORD='replace-me' \
+make up
+```
+
+The provisioned PostgreSQL dashboard is stored at `grafana/dashboards/postgres.json`. Query statistics are bounded to 100 query IDs per scrape and do not include SQL text in metric labels.
+
+Alloy replaces the PostgreSQL metrics collector, not Prometheus's durable time-series storage and PromQL query API. Removing Prometheus would require a compatible backend such as Grafana Mimir or Grafana Cloud. Temporal metrics remain scraped directly by Prometheus in this version.
 
 ## Example Workflow Run
 

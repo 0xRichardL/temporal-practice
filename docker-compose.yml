@@ -54,6 +54,28 @@ services:
       postgres:
         condition: service_healthy
 
+  # PostgreSQL Monitoring Init: create Alloy's least-privilege role and query extension
+  postgres-monitoring-init:
+    image: postgres:16
+    container_name: postgres-monitoring-init
+    restart: "no"
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: postgres
+      PGPASSWORD: postgres
+      POSTGRES_MONITOR_PASSWORD: ${POSTGRES_MONITOR_PASSWORD:-alloy_monitor}
+    networks:
+      - internal
+    volumes:
+      - ./postgres/setup-monitoring.sh:/scripts/setup-monitoring.sh:ro
+    entrypoint: ["/bin/sh", "/scripts/setup-monitoring.sh"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      temporal-admin-tools:
+        condition: service_completed_successfully
+
   # Temporal Matching: task queue matching and dispatch
   temporal-matching:
     <<: *temporal-server-common
@@ -157,6 +179,37 @@ services:
       - "--config.file=/etc/prometheus/prometheus.yml"
       - "--storage.tsdb.path=/prometheus"
       - "--web.enable-lifecycle"
+      - "--web.enable-remote-write-receiver"
+
+  # Alloy: collect PostgreSQL metrics and remote-write them to Prometheus
+  alloy:
+    image: grafana/alloy:v1.17.0
+    container_name: alloy
+    restart: unless-stopped
+    environment:
+      POSTGRES_MONITOR_PASSWORD: ${POSTGRES_MONITOR_PASSWORD:-alloy_monitor}
+    ports:
+      - "12345:12345"
+    networks:
+      - internal
+    volumes:
+      - ./alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - alloy_data:/var/lib/alloy/data
+    command:
+      - run
+      - "--server.http.listen-addr=0.0.0.0:12345"
+      - "--storage.path=/var/lib/alloy/data"
+      - /etc/alloy/config.alloy
+    depends_on:
+      postgres-monitoring-init:
+        condition: service_completed_successfully
+      prometheus:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "alloy", "validate", "/etc/alloy/config.alloy"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   # Grafana: dashboards and visualizations for Prometheus metrics
   grafana:
@@ -255,6 +308,7 @@ volumes:
   postgres_data: {}
   prometheus_data: {}
   grafana_data: {}
+  alloy_data: {}
 
 networks:
   internal:
